@@ -1,0 +1,957 @@
+<template>
+  <div class="chat">
+    <NavBar />
+    
+    <div class="chat-container">
+      <el-row :gutter="20" class="chat-row">
+        <!-- 聊天列表 -->
+        <el-col :xs="24" :md="8" class="chat-list-col">
+          <el-card class="chat-list-card">
+            <template #header>
+              <div class="chat-list-header">
+                <span>聊天列表</span>
+                <el-badge :value="unreadCount" :hidden="unreadCount === 0" />
+              </div>
+            </template>
+            
+            <el-input
+              v-model="searchQuery"
+              placeholder="搜尋聊天"
+              clearable
+              class="search-input"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+            
+            <el-scrollbar height="calc(100vh - 280px)">
+              <div
+                v-for="chat in filteredChats"
+                :key="chat.id"
+                class="chat-item"
+                :class="{ active: selectedChat?.id === chat.id }"
+                @click="selectChat(chat)"
+              >
+                <el-badge :value="chat.unreadCount" :hidden="chat.unreadCount === 0">
+                  <el-avatar :size="50" :src="chat.avatar" />
+                </el-badge>
+                <div class="chat-item-content">
+                  <div class="chat-item-header">
+                    <span class="chat-name">{{ chat.name }}</span>
+                    <span class="chat-time">{{ chat.lastMessageTime }}</span>
+                  </div>
+                  <div class="chat-last-message">{{ chat.lastMessage }}</div>
+                </div>
+              </div>
+              
+              <el-empty v-if="filteredChats.length === 0" description="沒有聊天記錄" />
+            </el-scrollbar>
+          </el-card>
+        </el-col>
+        
+        <!-- 聊天窗口 -->
+        <el-col :xs="24" :md="16" class="chat-window-col">
+          <el-card v-if="selectedChat" class="chat-window-card">
+            <template #header>
+              <div class="chat-window-header">
+                <div class="chat-user-info">
+                  <el-avatar :size="40" :src="selectedChat.avatar" />
+                  <div class="user-info">
+                    <span class="user-name">{{ selectedChat.name }}</span>
+                    <span class="user-status" :class="{ online: selectedChat.online }">
+                      {{ selectedChat.online ? '在線' : '離線' }}
+                    </span>
+                  </div>
+                </div>
+                <el-button-group>
+                  <el-button size="small" @click="viewUserProfile">
+                    <el-icon><User /></el-icon>
+                    查看資料
+                  </el-button>
+                  <el-button size="small" @click="viewActivityDetails">
+                    <el-icon><Calendar /></el-icon>
+                    活動詳情
+                  </el-button>
+                </el-button-group>
+              </div>
+            </template>
+            
+            <!-- 訊息列表 -->
+            <el-scrollbar ref="messageScrollbar" height="calc(100vh - 400px)" class="message-list">
+              <div
+                v-for="message in messages"
+                :key="message.id"
+                class="message-item"
+                :class="{ 'is-mine': message.isMine }"
+              >
+                <el-avatar v-if="!message.isMine" :size="35" :src="selectedChat.avatar" />
+                <div class="message-content">
+                  <div v-if="message.type === 'text'" class="message-bubble">
+                    {{ message.content }}
+                  </div>
+                  <div v-else-if="message.type === 'image'" class="message-image">
+                    <el-image :src="message.content" fit="cover" />
+                  </div>
+                  <span class="message-time">{{ message.time }}</span>
+                </div>
+              </div>
+            </el-scrollbar>
+            
+            <!-- 輸入框 -->
+            <div class="message-input-area">
+              <el-input
+                v-model="messageInput"
+                type="textarea"
+                :rows="3"
+                placeholder="輸入訊息... (Ctrl+Enter 發送)"
+                @keydown.ctrl.enter="sendMessage"
+              />
+              
+              <!-- 表情選擇器 -->
+              <div v-if="showEmojiPicker" class="emoji-picker">
+                <div class="emoji-grid">
+                  <span
+                    v-for="emoji in emojis"
+                    :key="emoji"
+                    class="emoji-item"
+                    @click="selectEmoji(emoji)"
+                  >
+                    {{ emoji }}
+                  </span>
+                </div>
+              </div>
+              
+              <div class="input-actions">
+                <el-button-group>
+                  <el-button size="small" @click="showEmojiPicker = !showEmojiPicker">
+                    <el-icon><ChatDotRound /></el-icon>
+                    表情
+                  </el-button>
+                  <el-button size="small" @click="selectImage">
+                    <el-icon><Picture /></el-icon>
+                    圖片
+                  </el-button>
+                </el-button-group>
+                <el-button type="primary" @click="sendMessage">
+                  發送
+                  <el-icon><Promotion /></el-icon>
+                </el-button>
+              </div>
+              
+              <!-- 隱藏的文件輸入 -->
+              <input
+                ref="imageInput"
+                type="file"
+                accept="image/*"
+                style="display: none"
+                @change="handleImageSelect"
+              />
+            </div>
+          </el-card>
+          
+          <!-- 未選擇聊天時的提示 -->
+          <el-card v-else class="chat-window-card">
+            <el-empty description="請選擇一個聊天開始對話" />
+          </el-card>
+        </el-col>
+      </el-row>
+    </div>
+
+    <!-- 用戶資料對話框 -->
+    <el-dialog
+      v-model="showUserProfileDialog"
+      title="用戶資料"
+      width="500px"
+    >
+      <el-descriptions v-if="selectedUserProfile" :column="1" border>
+        <el-descriptions-item label="用戶名">
+          {{ selectedUserProfile.username }}
+        </el-descriptions-item>
+        <el-descriptions-item label="Email">
+          {{ selectedUserProfile.email }}
+        </el-descriptions-item>
+        <el-descriptions-item label="性別">
+          {{ selectedUserProfile.gender === 'male' ? '男' : selectedUserProfile.gender === 'female' ? '女' : '其他' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="年齡">
+          {{ selectedUserProfile.age || '未設定' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="地點">
+          {{ selectedUserProfile.location || '未設定' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="興趣標籤">
+          <div v-if="selectedUserProfile.interests && selectedUserProfile.interests.length > 0" class="interest-tags">
+            <el-tag
+              v-for="interest in selectedUserProfile.interests"
+              :key="interest"
+              size="small"
+              type="info"
+              style="margin: 2px;"
+            >
+              {{ interest }}
+            </el-tag>
+          </div>
+          <span v-else class="text-secondary">未設定</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="簡介">
+          {{ selectedUserProfile.bio || '這個用戶還沒有填寫簡介' }}
+        </el-descriptions-item>
+      </el-descriptions>
+      
+      <template #footer>
+        <el-button @click="showUserProfileDialog = false">關閉</el-button>
+      </template>
+    </el-dialog>
+    
+    <!-- 共同參與的活動對話框 -->
+    <el-dialog
+      v-model="showActivityDialog"
+      title="共同參與的活動"
+      width="600px"
+    >
+      <el-space direction="vertical" style="width: 100%">
+        <el-card
+          v-for="activity in sharedActivities"
+          :key="activity.activity_id"
+          shadow="hover"
+          class="activity-card"
+          @click="goToActivity(activity.activity_id)"
+        >
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h3>{{ activity.title }}</h3>
+              <p style="color: #909399; margin: 5px 0;">
+                <el-icon><Calendar /></el-icon>
+                {{ activity.date ? new Date(activity.date).toLocaleDateString('zh-TW') : '待定' }}
+              </p>
+              <p style="color: #909399; margin: 5px 0;">
+                <el-icon><Location /></el-icon>
+                {{ activity.location }}
+              </p>
+            </div>
+            <el-tag :type="getActivityStatusType(activity.status)">
+              {{ getActivityStatusText(activity.status) }}
+            </el-tag>
+          </div>
+        </el-card>
+      </el-space>
+      
+      <template #footer>
+        <el-button @click="showActivityDialog = false">關閉</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import {
+  Search,
+  User,
+  Calendar,
+  ChatDotRound,
+  Picture,
+  Promotion,
+  Location
+} from '@element-plus/icons-vue'
+import NavBar from '@/components/NavBar.vue'
+import axios from '@/utils/axios'
+import socketService from '@/services/socket'
+
+const router = useRouter()
+const route = useRoute()
+
+// 搜尋
+const searchQuery = ref('')
+
+// 聊天列表
+const chats = ref([])
+
+// 已選擇的聊天
+const selectedChat = ref(null)
+
+// 訊息列表
+const messages = ref([])
+
+// 訊息輸入
+const messageInput = ref('')
+
+// 訊息滾動容器
+const messageScrollbar = ref(null)
+
+// 載入聊天列表
+const loadConversations = async () => {
+  try {
+    const response = await axios.get('/chat/conversations')
+    
+    if (response.data && response.data.conversations) {
+      chats.value = response.data.conversations.map(conv => ({
+        id: conv.other_user.user_id,
+        matchId: conv.match_id,
+        activityId: conv.activity_id,
+        name: conv.other_user.name,
+        avatar: conv.other_user.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+        lastMessage: conv.last_message?.content || '開始聊天吧',
+        lastMessageTime: conv.last_message ? formatTime(conv.last_message.created_at) : '',
+        unreadCount: conv.unread_count || 0,
+        online: conv.other_user.is_online || false
+      }))
+    }
+  } catch (error) {
+    console.error('載入聊天列表失敗:', error)
+    if (error.response?.status === 401) {
+      ElMessage.error('登入已過期，請重新登入')
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      router.push('/login')
+    }
+  }
+}
+
+// 載入聊天訊息
+const loadMessages = async (userId) => {
+  try {
+    const response = await axios.get(`/chat/${userId}/messages`)
+    
+    if (response.data && response.data.messages) {
+      const currentUserId = JSON.parse(localStorage.getItem('user')).user_id
+      messages.value = response.data.messages.map(msg => ({
+        id: msg.message_id,
+        type: 'text',
+        content: msg.content,
+        time: formatTime(msg.created_at),
+        isMine: msg.sender_id === currentUserId
+      }))
+    } else {
+      // 沒有訊息記錄時，設為空陣列
+      messages.value = []
+    }
+    
+    // 滾動到底部
+    nextTick(() => {
+      if (messageScrollbar.value) {
+        messageScrollbar.value.setScrollTop(999999)
+      }
+    })
+  } catch (error) {
+    console.error('載入訊息失敗:', error)
+    // 發生錯誤時也設為空陣列，這樣可以開始新聊天
+    messages.value = []
+  }
+}
+
+// 格式化時間
+const formatTime = (dateString) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diff = now - date
+  
+  if (diff < 86400000) { // 24小時內
+    return date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+  } else if (diff < 172800000) { // 48小時內
+    return '昨天'
+  } else {
+    return date.toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
+  }
+}
+
+// 未讀數量
+const unreadCount = computed(() => {
+  return chats.value.reduce((sum, chat) => sum + chat.unreadCount, 0)
+})
+
+// 過濾後的聊天列表
+const filteredChats = computed(() => {
+  if (!searchQuery.value) return chats.value
+  
+  return chats.value.filter(chat =>
+    chat.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+  )
+})
+
+// 選擇聊天
+const selectChat = (chat) => {
+  // 如果之前有選擇的聊天，先離開
+  if (selectedChat.value && selectedChat.value.matchId) {
+    const currentUser = JSON.parse(localStorage.getItem('user'))
+    socketService.leaveChat(selectedChat.value.matchId, currentUser.user_id)
+  }
+  
+  selectedChat.value = chat
+  // 清除未讀數
+  chat.unreadCount = 0
+  
+  // 載入訊息
+  loadMessages(chat.id)
+  
+  // 加入新的聊天室
+  if (chat.matchId && socketService.isConnected()) {
+    const currentUser = JSON.parse(localStorage.getItem('user'))
+    socketService.joinChat(chat.matchId, currentUser.user_id)
+    
+    // 標記為已讀
+    socketService.markAsRead(chat.matchId, currentUser.user_id)
+  }
+}
+
+// 發送訊息
+const sendMessage = async () => {
+  if (!messageInput.value.trim()) {
+    ElMessage.warning('請輸入訊息內容')
+    return
+  }
+  
+  if (!selectedChat.value) {
+    ElMessage.warning('請選擇聊天對象')
+    return
+  }
+  
+  try {
+    const currentUser = JSON.parse(localStorage.getItem('user'))
+    
+    // 優先使用 Socket.IO 發送
+    if (socketService.isConnected() && selectedChat.value.matchId) {
+      await socketService.sendMessage(
+        selectedChat.value.matchId,
+        currentUser.user_id,
+        messageInput.value,
+        'text'
+      )
+      
+      // Socket.IO 會通過 new_message 事件回傳訊息，不需要手動添加
+      messageInput.value = ''
+      
+    } else {
+      // 降級到 HTTP API
+      const response = await axios.post('/chat/messages', {
+        receiver_id: selectedChat.value.id,
+        content: messageInput.value
+      })
+      
+      if (response.data && response.data.message) {
+        const newMessage = {
+          id: response.data.message.message_id,
+          type: 'text',
+          content: messageInput.value,
+          time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
+          isMine: true
+        }
+        
+        messages.value.push(newMessage)
+        messageInput.value = ''
+        
+        // 更新聊天列表中的最後訊息
+        const chatIndex = chats.value.findIndex(c => c.id === selectedChat.value.id)
+        if (chatIndex !== -1) {
+          chats.value[chatIndex].lastMessage = newMessage.content
+          chats.value[chatIndex].lastMessageTime = newMessage.time
+        }
+        
+        // 滾動到底部
+        nextTick(() => {
+          if (messageScrollbar.value) {
+            messageScrollbar.value.setScrollTop(999999)
+          }
+        })
+      }
+    }
+  } catch (error) {
+    console.error('發送訊息失敗:', error)
+    ElMessage.error('發送訊息失敗')
+  }
+}
+
+// 組件掛載時載入聊天列表
+onMounted(async () => {
+  await loadConversations()
+  
+  // 連線到 Socket.IO
+  socketService.connect()
+  
+  // 監聽新訊息
+  socketService.onNewMessage((message) => {
+    console.log('收到即時訊息:', message)
+    
+    // 如果是當前聊天室的訊息，添加到訊息列表
+    if (selectedChat.value && message.match_id === selectedChat.value.matchId) {
+      const currentUserId = JSON.parse(localStorage.getItem('user')).user_id
+      messages.value.push({
+        id: message.message_id,
+        type: message.message_type,
+        content: message.content,
+        time: formatTime(message.timestamp),
+        isMine: message.sender_id === currentUserId
+      })
+      
+      // 滾動到底部
+      nextTick(() => {
+        if (messageScrollbar.value) {
+          messageScrollbar.value.setScrollTop(999999)
+        }
+      })
+    }
+    
+    // 更新聊天列表中的最後訊息
+    const chatIndex = chats.value.findIndex(c => c.matchId === message.match_id)
+    if (chatIndex > -1) {
+      chats.value[chatIndex].lastMessage = message.content
+      chats.value[chatIndex].lastMessageTime = formatTime(message.timestamp)
+      
+      // 如果不是當前聊天，增加未讀數
+      if (!selectedChat.value || selectedChat.value.matchId !== message.match_id) {
+        chats.value[chatIndex].unreadCount = (chats.value[chatIndex].unreadCount || 0) + 1
+      }
+    }
+  })
+  
+  // 監聽輸入狀態
+  let typingTimeout = null
+  socketService.onUserTyping((data) => {
+    if (selectedChat.value && data.user_id !== JSON.parse(localStorage.getItem('user')).user_id) {
+      // 顯示輸入提示
+      console.log('對方正在輸入...', data.is_typing)
+      
+      if (typingTimeout) {
+        clearTimeout(typingTimeout)
+      }
+      
+      if (data.is_typing) {
+        typingTimeout = setTimeout(() => {
+          // 3秒後自動隱藏
+        }, 3000)
+      }
+    }
+  })
+  
+  // 監聽用戶上線/離線狀態
+  socketService.on('user_status_change', (data) => {
+    console.log('用戶狀態變更:', data)
+    // 更新聊天列表中的在線狀態
+    const chatIndex = chats.value.findIndex(c => c.id === data.user_id)
+    if (chatIndex > -1) {
+      chats.value[chatIndex].online = data.online
+    }
+    
+    // 如果是當前聊天對象，也更新
+    if (selectedChat.value && selectedChat.value.id === data.user_id) {
+      selectedChat.value.online = data.online
+    }
+  })
+  
+  // 如果 URL 中有 userId 參數，自動選擇該用戶
+  const userIdParam = route.query.userId
+  if (userIdParam) {
+    const userId = parseInt(userIdParam)
+    
+    // 先檢查聊天列表中是否已有該用戶
+    let chat = chats.value.find(c => c.id === userId)
+    
+    if (chat) {
+      // 如果已存在，直接選擇
+      selectChat(chat)
+    } else {
+      // 如果不存在，創建新的聊天
+      try {
+        const response = await axios.get(`/users/${userId}`)
+        if (response.data && response.data.user) {
+          const user = response.data.user
+          chat = {
+            id: user.user_id,
+            name: user.name,
+            avatar: user.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+            lastMessage: '開始聊天吧',
+            lastMessageTime: '',
+            unreadCount: 0,
+            online: false
+          }
+          
+          // 添加到聊天列表
+          chats.value.unshift(chat)
+          
+          // 選擇該聊天
+          selectChat(chat)
+        }
+      } catch (error) {
+        console.error('載入用戶資料失敗:', error)
+        ElMessage.error('無法開始聊天')
+      }
+    }
+  }
+})
+
+// 組件卸載時斷開連線
+onUnmounted(() => {
+  // 如果有選擇的聊天，離開聊天室
+  if (selectedChat.value && selectedChat.value.matchId) {
+    const currentUser = JSON.parse(localStorage.getItem('user'))
+    socketService.leaveChat(selectedChat.value.matchId, currentUser.user_id)
+  }
+  
+  // 斷開 Socket.IO 連線（可選，如果其他頁面也需要則不斷開）
+  // socketService.disconnect()
+})
+
+// 選擇表情
+const showEmojiPicker = ref(false)
+const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', 
+  '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', 
+  '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪',
+  '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👏', '🙌', '👐', '🤲', '🙏', '✨', '🎉',
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗']
+
+const selectEmoji = (emoji) => {
+  messageInput.value += emoji
+  showEmojiPicker.value = false
+}
+
+// 選擇圖片
+const imageInput = ref(null)
+
+const selectImage = () => {
+  imageInput.value?.click()
+}
+
+const handleImageSelect = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  if (!file.type.startsWith('image/')) {
+    ElMessage.error('請選擇圖片檔案')
+    return
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.error('圖片大小不能超過 5MB')
+    return
+  }
+
+  // TODO: 實作圖片上傳到服務器
+  // 目前只顯示檔名
+  messageInput.value += `[圖片: ${file.name}]`
+  ElMessage.info('圖片上傳功能需要後端支援，目前僅顯示檔名')
+}
+
+// 查看用戶資料
+const showUserProfileDialog = ref(false)
+const selectedUserProfile = ref(null)
+
+const viewUserProfile = async () => {
+  if (!selectedChat.value) {
+    ElMessage.warning('請先選擇聊天對象')
+    return
+  }
+
+  try {
+    const response = await axios.get(`/users/${selectedChat.value.id}`)
+    if (response.data && response.data.user) {
+      selectedUserProfile.value = response.data.user
+      showUserProfileDialog.value = true
+    }
+  } catch (error) {
+    console.error('載入用戶資料失敗:', error)
+    ElMessage.error('無法載入用戶資料')
+  }
+}
+
+// 查看活動詳情
+const showActivityDialog = ref(false)
+const sharedActivities = ref([])
+
+const viewActivityDetails = async () => {
+  if (!selectedChat.value) {
+    ElMessage.warning('請先選擇聊天對象')
+    return
+  }
+  
+  try {
+    // 首先檢查當前對話是否有關聯活動
+    const activityId = selectedChat.value.activityId
+    
+    if (activityId) {
+      // 如果有關聯活動，直接跳轉
+      router.push(`/activities/${activityId}`)
+      return
+    }
+    
+    // 如果沒有關聯活動，查詢共同參與的活動
+    const response = await axios.get(`/chat/shared-activities/${selectedChat.value.id}`)
+    
+    if (response.data.shared_activities && response.data.shared_activities.length > 0) {
+      sharedActivities.value = response.data.shared_activities
+      showActivityDialog.value = true
+    } else {
+      ElMessage.info('您與此用戶沒有共同參與的活動')
+    }
+  } catch (error) {
+    console.error('無法查看活動詳情:', error)
+    ElMessage.error('無法查看活動詳情')
+  }
+}
+
+// 跳轉到活動詳情
+const goToActivity = (activityId) => {
+  showActivityDialog.value = false
+  router.push(`/activities/${activityId}`)
+}
+
+// 活動狀態輔助函數
+const getActivityStatusType = (status) => {
+  const types = {
+    planning: 'info',
+    recruiting: 'success',
+    active: 'success',
+    open: 'success',
+    confirmed: 'warning',
+    ongoing: 'warning',
+    completed: '',
+    cancelled: 'danger'
+  }
+  return types[status] || 'info'
+}
+
+const getActivityStatusText = (status) => {
+  const texts = {
+    planning: '籌備中',
+    recruiting: '招募中',
+    active: '招募中',
+    open: '開放報名',
+    confirmed: '已成團',
+    ongoing: '進行中',
+    completed: '已完成',
+    cancelled: '已取消'
+  }
+  return texts[status] || status
+}
+</script>
+
+<style scoped>
+.chat {
+  min-height: 100vh;
+  background-color: #f5f7fa;
+}
+
+.chat-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.chat-row {
+  height: calc(100vh - 100px);
+}
+
+.chat-list-card,
+.chat-window-card {
+  height: 100%;
+}
+
+.chat-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-input {
+  margin-bottom: 15px;
+}
+
+.chat-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.3s;
+}
+
+.chat-item:hover {
+  background-color: #f5f7fa;
+}
+
+.chat-item.active {
+  background-color: #ecf5ff;
+}
+
+.chat-item-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.chat-item-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.chat-name {
+  font-weight: bold;
+  font-size: 15px;
+}
+
+.chat-time {
+  font-size: 12px;
+  color: #909399;
+}
+
+.chat-last-message {
+  font-size: 13px;
+  color: #909399;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-window-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.user-status {
+  font-size: 12px;
+  color: #909399;
+}
+
+.user-status.online {
+  color: #67c23a;
+}
+
+.message-list {
+  padding: 20px;
+}
+
+.message-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.message-item.is-mine {
+  flex-direction: row-reverse;
+}
+
+.message-content {
+  display: flex;
+  flex-direction: column;
+  max-width: 60%;
+}
+
+.message-item.is-mine .message-content {
+  align-items: flex-end;
+}
+
+.message-bubble {
+  padding: 10px 15px;
+  border-radius: 12px;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  word-break: break-word;
+}
+
+.message-item.is-mine .message-bubble {
+  background-color: #409eff;
+  color: #fff;
+}
+
+.message-image {
+  width: 200px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.message-time {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 5px;
+}
+
+.message-input-area {
+  margin-top: 15px;
+  border-top: 1px solid #dcdfe6;
+  padding-top: 15px;
+}
+
+.input-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.emoji-picker {
+  margin: 10px 0;
+  padding: 10px;
+  background-color: #fff;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.emoji-item {
+  font-size: 24px;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.emoji-item:hover {
+  background-color: #f5f7fa;
+}
+
+.activity-card {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.activity-card:hover {
+  transform: translateY(-2px);
+}
+
+.activity-card h3 {
+  margin: 0 0 10px 0;
+  color: #303133;
+}
+
+@media (max-width: 768px) {
+  .chat-container {
+    padding: 10px;
+  }
+  
+  .chat-list-col {
+    display: none;
+  }
+  
+  .message-content {
+    max-width: 80%;
+  }
+}
+</style>
