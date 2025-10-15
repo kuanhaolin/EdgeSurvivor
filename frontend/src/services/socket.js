@@ -28,8 +28,10 @@ class SocketService {
       return
     }
 
+    // 在 Docker 環境中使用相對路徑，讓 Vite proxy 處理
+    // 在生產環境使用當前 origin
     const SOCKET_URL = import.meta.env.DEV 
-      ? 'http://localhost:5000' 
+      ? window.location.origin  // 使用當前 origin，讓 proxy 轉發
       : window.location.origin
 
     console.log('正在連線到 Socket.IO...', SOCKET_URL)
@@ -38,6 +40,7 @@ class SocketService {
       auth: {
         token: token
       },
+      path: '/socket.io',  // 明確指定 Socket.IO 路徑
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,

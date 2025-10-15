@@ -144,10 +144,14 @@ def register_socketio_events(socketio, app):
                 if sender_id not in [match.user_a, match.user_b]:
                     return {'error': '無權限發送訊息'}
                 
+                # 確定接收者 ID（媒合中的另一方）
+                receiver_id = match.user_b if match.user_a == sender_id else match.user_a
+                
                 # 儲存訊息到資料庫
                 message = ChatMessage(
                     match_id=match_id,
                     sender_id=sender_id,
+                    receiver_id=receiver_id,  # 添加接收者 ID
                     content=content,
                     message_type=message_type,
                     status='sent'

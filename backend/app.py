@@ -26,7 +26,14 @@ def create_app(config_name=None):
     # 初始化擴充套件
     db.init_app(app)
     jwt.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*")
+    # Socket.IO 配置 - 使用 threading 異步模式（開發環境）
+    socketio.init_app(
+        app, 
+        cors_allowed_origins="*",
+        async_mode='threading',  # 使用 threading 異步模式
+        logger=True,
+        engineio_logger=False
+    )
     migrate.init_app(app, db)
     CORS(app, resources={
         r"/api/*": {
@@ -119,4 +126,5 @@ app = create_app()
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    # 在 Docker 開發環境中允許使用 Werkzeug
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)

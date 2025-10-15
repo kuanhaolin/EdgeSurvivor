@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS expenses (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 插入測試資料（可選）
--- 密碼都是 'password123'
+-- 測試使用者
 INSERT INTO users (name, email, password_hash, gender, age, location, bio, interests) VALUES
 ('小明', 'ming@example.com', 'scrypt:32768:8:1$hT9xKkjH3TGfRqEe$e4c8f5e6a8d1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0', 'male', 25, '台灣 - 台北市', '喜歡旅行和探索新地方！', '["登山", "攝影", "旅遊"]'),
 ('小花', 'hua@example.com', 'scrypt:32768:8:1$hT9xKkjH3TGfRqEe$e4c8f5e6a8d1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0', 'female', 23, '台灣 - 新北市', '熱愛美食和攝影的女孩', '["美食", "攝影", "咖啡"]'),
