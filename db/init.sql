@@ -1,162 +1,166 @@
--- EdgeSurvivor 完整資料庫初始化腳本
--- 此腳本會在 Docker 容器首次啟動時自動執行
+-- MySQL Database Dump
 
--- 確保使用 UTF-8 編碼
-SET NAMES utf8mb4;
-SET CHARACTER SET utf8mb4;
+DROP TABLE IF EXISTS `expenses`;
+DROP TABLE IF EXISTS `chat_messages`;
+DROP TABLE IF EXISTS `activity_participants`;
+DROP TABLE IF EXISTS `activity_discussions`;
+DROP TABLE IF EXISTS `matches`;
+DROP TABLE IF EXISTS `activities`;
+DROP TABLE IF EXISTS `places`;
+DROP TABLE IF EXISTS `users`;
 
--- 使用者表
-CREATE TABLE IF NOT EXISTS users (
-    user_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(120) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    privacy_setting VARCHAR(20) DEFAULT 'public',
-    location VARCHAR(100),
-    profile_picture VARCHAR(255),
-    bio TEXT,
-    gender VARCHAR(10),
-    age INT,
-    interests TEXT COMMENT 'JSON 格式的興趣標籤',
-    join_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    is_verified BOOLEAN DEFAULT FALSE,
-    is_active BOOLEAN DEFAULT TRUE,
-    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_email (email),
-    INDEX idx_location (location)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `users` (
+  `user_id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `email` varchar(120) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `privacy_setting` varchar(20) DEFAULT NULL,
+  `location` varchar(100) DEFAULT NULL,
+  `profile_picture` varchar(255) DEFAULT NULL,
+  `bio` text DEFAULT NULL,
+  `gender` varchar(10) DEFAULT NULL,
+  `age` int(11) DEFAULT NULL,
+  `interests` text DEFAULT NULL,
+  `join_date` datetime DEFAULT NULL,
+  `is_verified` tinyint(1) DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT NULL,
+  `last_seen` datetime DEFAULT NULL,
+  PRIMARY KEY (`user_id`),
+  UNIQUE KEY `ix_users_email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 活動表
-CREATE TABLE IF NOT EXISTS activities (
-    activity_id INT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(200) NOT NULL,
-    date DATE,
-    start_time VARCHAR(10),
-    location VARCHAR(200),
-    description TEXT,
-    category VARCHAR(50),
-    max_participants INT,
-    cost DECIMAL(10,2),
-    duration_hours INT,
-    status VARCHAR(20) DEFAULT 'open',
-    cover_image VARCHAR(255),
-    images TEXT COMMENT 'JSON 格式的圖片列表',
-    is_active BOOLEAN DEFAULT TRUE,
-    creator_id INT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (creator_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    INDEX idx_date (date),
-    INDEX idx_location (location),
-    INDEX idx_category (category),
-    INDEX idx_creator (creator_id),
-    INDEX idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Table structure for table `activities`
+CREATE TABLE `activities` (
+  `activity_id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(200) NOT NULL,
+  `date` date NOT NULL,
+  `location` varchar(200) NOT NULL,
+  `description` text DEFAULT NULL,
+  `category` varchar(50) DEFAULT NULL,
+  `max_participants` int(11) DEFAULT NULL,
+  `cost` decimal(10,2) DEFAULT NULL,
+  `status` varchar(20) DEFAULT NULL,
+  `creator_id` int(11) NOT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `meeting_point` varchar(255) DEFAULT NULL,
+  `duration_hours` int(11) DEFAULT NULL,
+  `difficulty_level` varchar(20) DEFAULT NULL,
+  `gender_preference` varchar(20) DEFAULT NULL,
+  `age_min` int(11) DEFAULT NULL,
+  `age_max` int(11) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `cover_image` varchar(500) DEFAULT NULL,
+  `images` text DEFAULT NULL,
+  PRIMARY KEY (`activity_id`),
+  KEY `creator_id` (`creator_id`),
+  CONSTRAINT `activities_ibfk_1` FOREIGN KEY (`creator_id`) REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 活動參與者表
-CREATE TABLE IF NOT EXISTS activity_participants (
-    participant_id INT AUTO_INCREMENT PRIMARY KEY,
-    activity_id INT NOT NULL,
-    user_id INT NOT NULL,
-    status VARCHAR(20) DEFAULT 'pending',
-    role VARCHAR(20) DEFAULT 'participant',
-    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    approved_at DATETIME,
-    left_at DATETIME,
-    message TEXT,
-    rejection_reason TEXT,
-    FOREIGN KEY (activity_id) REFERENCES activities(activity_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    UNIQUE KEY uk_activity_user (activity_id, user_id),
-    INDEX idx_status (status),
-    INDEX idx_user (user_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Table structure for table `matches`
+CREATE TABLE `matches` (
+  `match_id` int(11) NOT NULL AUTO_INCREMENT,
+  `activity_id` int(11) DEFAULT NULL,
+  `user_a` int(11) NOT NULL,
+  `user_b` int(11) NOT NULL,
+  `status` varchar(20) DEFAULT NULL,
+  `match_date` datetime DEFAULT NULL,
+  `confirmed_date` datetime DEFAULT NULL,
+  `cancel_date` datetime DEFAULT NULL,
+  `message` text DEFAULT NULL,
+  `rejection_reason` text DEFAULT NULL,
+  PRIMARY KEY (`match_id`),
+  KEY `activity_id` (`activity_id`),
+  KEY `user_a` (`user_a`),
+  KEY `user_b` (`user_b`),
+  CONSTRAINT `matches_ibfk_1` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`),
+  CONSTRAINT `matches_ibfk_2` FOREIGN KEY (`user_a`) REFERENCES `users` (`user_id`),
+  CONSTRAINT `matches_ibfk_3` FOREIGN KEY (`user_b`) REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 活動討論串表
-CREATE TABLE IF NOT EXISTS activity_discussions (
-    discussion_id INT AUTO_INCREMENT PRIMARY KEY,
-    activity_id INT NOT NULL,
-    user_id INT NOT NULL,
-    message TEXT NOT NULL,
-    message_type VARCHAR(20) DEFAULT 'text',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_deleted BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (activity_id) REFERENCES activities(activity_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    INDEX idx_activity (activity_id),
-    INDEX idx_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Table structure for table `activity_discussions`
+CREATE TABLE `activity_discussions` (
+  `discussion_id` int(11) NOT NULL AUTO_INCREMENT,
+  `activity_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `message` text NOT NULL,
+  `message_type` varchar(20) DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `is_deleted` tinyint(1) DEFAULT NULL,
+  PRIMARY KEY (`discussion_id`),
+  KEY `activity_id` (`activity_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `activity_discussions_ibfk_1` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`),
+  CONSTRAINT `activity_discussions_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 媒合表
-CREATE TABLE IF NOT EXISTS matches (
-    match_id INT AUTO_INCREMENT PRIMARY KEY,
-    activity_id INT,
-    user_a INT NOT NULL COMMENT '申請者',
-    user_b INT NOT NULL COMMENT '接收者',
-    status VARCHAR(20) DEFAULT 'pending',
-    message TEXT,
-    match_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    confirmed_date DATETIME,
-    cancel_date DATETIME,
-    FOREIGN KEY (activity_id) REFERENCES activities(activity_id) ON DELETE SET NULL,
-    FOREIGN KEY (user_a) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_b) REFERENCES users(user_id) ON DELETE CASCADE,
-    INDEX idx_user_a (user_a),
-    INDEX idx_user_b (user_b),
-    INDEX idx_status (status),
-    INDEX idx_activity (activity_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Table structure for table `activity_participants`
+CREATE TABLE `activity_participants` (
+  `participant_id` int(11) NOT NULL AUTO_INCREMENT,
+  `activity_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `status` varchar(20) DEFAULT NULL,
+  `role` varchar(20) DEFAULT NULL,
+  `joined_at` datetime DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `left_at` datetime DEFAULT NULL,
+  `message` text DEFAULT NULL,
+  `rejection_reason` text DEFAULT NULL,
+  PRIMARY KEY (`participant_id`),
+  UNIQUE KEY `unique_activity_user` (`activity_id`,`user_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `activity_participants_ibfk_1` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`),
+  CONSTRAINT `activity_participants_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 聊天訊息表
-CREATE TABLE IF NOT EXISTS chat_messages (
-    message_id INT AUTO_INCREMENT PRIMARY KEY,
-    match_id INT NOT NULL,
-    sender_id INT NOT NULL,
-    content TEXT NOT NULL,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    message_type VARCHAR(20) DEFAULT 'text',
-    status VARCHAR(20) DEFAULT 'sent',
-    FOREIGN KEY (match_id) REFERENCES matches(match_id) ON DELETE CASCADE,
-    FOREIGN KEY (sender_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    INDEX idx_match (match_id),
-    INDEX idx_timestamp (timestamp),
-    INDEX idx_sender (sender_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Table structure for table `chat_messages`
+CREATE TABLE `chat_messages` (
+  `message_id` int(11) NOT NULL AUTO_INCREMENT,
+  `match_id` int(11) DEFAULT NULL,
+  `sender_id` int(11) NOT NULL,
+  `receiver_id` int(11) NOT NULL,
+  `content` text NOT NULL,
+  `timestamp` datetime DEFAULT NULL,
+  `message_type` varchar(20) DEFAULT NULL,
+  `status` varchar(20) DEFAULT NULL,
+  `is_read` tinyint(1) DEFAULT NULL,
+  `file_url` varchar(255) DEFAULT NULL,
+  `file_name` varchar(255) DEFAULT NULL,
+  `file_size` int(11) DEFAULT NULL,
+  PRIMARY KEY (`message_id`),
+  KEY `match_id` (`match_id`),
+  KEY `sender_id` (`sender_id`),
+  KEY `receiver_id` (`receiver_id`),
+  CONSTRAINT `chat_messages_ibfk_1` FOREIGN KEY (`match_id`) REFERENCES `matches` (`match_id`),
+  CONSTRAINT `chat_messages_ibfk_2` FOREIGN KEY (`sender_id`) REFERENCES `users` (`user_id`),
+  CONSTRAINT `chat_messages_ibfk_3` FOREIGN KEY (`receiver_id`) REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 費用表
-CREATE TABLE IF NOT EXISTS expenses (
-    expense_id INT AUTO_INCREMENT PRIMARY KEY,
-    activity_id INT NOT NULL,
-    payer_id INT NOT NULL,
-    amount DECIMAL(10,2) NOT NULL,
-    category VARCHAR(50),
-    expense_date DATE,
-    description TEXT,
-    paid BOOLEAN DEFAULT FALSE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (activity_id) REFERENCES activities(activity_id) ON DELETE CASCADE,
-    FOREIGN KEY (payer_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    INDEX idx_activity (activity_id),
-    INDEX idx_payer (payer_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Table structure for table `expenses`
+CREATE TABLE `expenses` (
+  `expense_id` int(11) NOT NULL AUTO_INCREMENT,
+  `activity_id` int(11) NOT NULL,
+  `payer_id` int(11) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `description` text DEFAULT NULL,
+  `expense_date` date DEFAULT NULL,
+  `category` varchar(50) DEFAULT NULL,
+  `is_split` tinyint(1) DEFAULT NULL,
+  `split_method` varchar(20) DEFAULT NULL,
+  `participants` text DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`expense_id`),
+  KEY `activity_id` (`activity_id`),
+  KEY `payer_id` (`payer_id`),
+  CONSTRAINT `expenses_ibfk_1` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`),
+  CONSTRAINT `expenses_ibfk_2` FOREIGN KEY (`payer_id`) REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 插入測試資料（可選）
--- 密碼都是 'password123'
-INSERT INTO users (name, email, password_hash, gender, age, location, bio, interests) VALUES
-('小明', 'ming@example.com', 'scrypt:32768:8:1$hT9xKkjH3TGfRqEe$e4c8f5e6a8d1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0', 'male', 25, '台灣 - 台北市', '喜歡旅行和探索新地方！', '["登山", "攝影", "旅遊"]'),
-('小花', 'hua@example.com', 'scrypt:32768:8:1$hT9xKkjH3TGfRqEe$e4c8f5e6a8d1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0', 'female', 23, '台灣 - 新北市', '熱愛美食和攝影的女孩', '["美食", "攝影", "咖啡"]'),
-('阿傑', 'jay@example.com', 'scrypt:32768:8:1$hT9xKkjH3TGfRqEe$e4c8f5e6a8d1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0', 'male', 28, '台灣 - 桃園市', '戶外運動愛好者', '["運動", "健身", "登山"]')
-ON DUPLICATE KEY UPDATE name=name;
-
--- 測試活動
-INSERT INTO activities (title, date, start_time, location, description, category, max_participants, cost, duration_hours, creator_id) VALUES
-('陽明山賞花一日遊', '2025-11-15', '08:00', '台北市 - 陽明山國家公園', '春天到了！一起去陽明山看櫻花吧～', '休閒', 4, 500, 6, 1),
-('九份老街美食之旅', '2025-11-20', '10:00', '新北市 - 九份老街', '探索九份的美食和歷史文化', '美食', 3, 800, 5, 2),
-('大稻埕河濱腳踏車', '2025-11-25', '09:00', '台北市 - 大稻埕碼頭', '騎腳踏車沿著淡水河畔，享受悠閒時光', '運動', 5, 200, 4, 3)
-ON DUPLICATE KEY UPDATE title=title;
-
--- 顯示初始化完成訊息
-SELECT '✅ 資料庫表格建立完成！' AS Status;
-SELECT CONCAT('📊 共建立 ', COUNT(*), ' 個使用者') AS Users FROM users;
-SELECT CONCAT('🎯 共建立 ', COUNT(*), ' 個活動') AS Activities FROM activities;
+-- Dumping data for table `users`
+LOCK TABLES `users` WRITE;
+INSERT INTO `users` VALUES
+(1,'test','test@test.com','pbkdf2:sha256:600000$fKDjdAsb4iJf4Fqt$470db787e1b6ef39aebaee5552e2713cc4ba09e0a646955c25fae5252319b8c8','public',NULL,NULL,'',NULL,NULL,NULL,'2025-10-22 01:57:11',0,1,'2025-10-22 01:57:57'),
+(2,'test1','test1@test1.com','pbkdf2:sha256:600000$HBcS0iXAXTXcwRPN$d4e915408aa3a7f764d5bba3a2ab2771df8bd55dd2ce779f11c8fe81a280a916','public',NULL,NULL,'',NULL,NULL,NULL,'2025-10-22 01:59:49',0,1,'2025-10-22 02:00:07'),
+(3,'test2','test2@test2.com','pbkdf2:sha256:600000$m5EkWqwPZBtrvXai$b5a97eb57179364a748ee0fac6ede5fd875b79b27d7abc70c24e393c5a9da88e','public',NULL,NULL,'',NULL,NULL,NULL,'2025-10-22 08:33:40',0,1,'2025-10-23 22:46:29');
+UNLOCK TABLES;
