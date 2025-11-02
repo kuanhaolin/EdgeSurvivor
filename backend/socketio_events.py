@@ -38,16 +38,35 @@ def register_socketio_events(socketio, app):
                 from flask import request
                 online_users[user_id] = request.sid
                 
-                logger.info(f'用戶 {user_id} 已連線 (SID: {request.sid})')
+                logger.info(f'🔌 用戶 {user_id} 已連線 (SID: {request.sid})')
                 
-                # 廣播用戶上線
-                emit('user_online', {'user_id': user_id}, broadcast=True)
+                # 不在 connect 時 emit - 會導致 Werkzeug 錯誤
+                # 改為客戶端連線成功後發送 'user_ready' 事件
                 
                 return True
                 
         except Exception as e:
-            logger.error(f'連線錯誤: {str(e)}')
+            logger.error(f'❌ 連線錯誤: {str(e)}')
             return False
+    
+    @socketio.on('user_ready')
+    def handle_user_ready():
+        """處理用戶就緒事件 - 在連線成功後由客戶端觸發"""
+        try:
+            from flask import request
+            # 找到當前用戶
+            user_id = None
+            for uid, sid in online_users.items():
+                if sid == request.sid:
+                    user_id = uid
+                    break
+            
+            if user_id:
+                logger.info(f'✅ 用戶 {user_id} 已就緒，廣播上線狀態')
+                # 廣播用戶上線
+                emit('user_online', {'user_id': user_id}, broadcast=True, skip_sid=True)
+        except Exception as e:
+            logger.error(f'❌ 用戶就緒錯誤: {str(e)}')
     
     @socketio.on('disconnect')
     def handle_disconnect():
@@ -63,40 +82,54 @@ def register_socketio_events(socketio, app):
             
             if user_id:
                 del online_users[user_id]
-                logger.info(f'用戶 {user_id} 已斷線')
+                logger.info(f'🔌 用戶 {user_id} 已斷線 (SID: {request.sid})')
                 
-                # 廣播用戶離線
-                emit('user_offline', {'user_id': user_id}, broadcast=True)
+                # 不在 disconnect 時 emit - 會導致 Werkzeug 錯誤
+                # 離線狀態可由心跳機制或超時檢測處理
                 
         except Exception as e:
-            logger.error(f'斷線處理錯誤: {str(e)}')
+            logger.error(f'❌ 斷線處理錯誤: {str(e)}')
     
     @socketio.on('join_chat')
     def handle_join_chat(data):
-        """加入聊天室"""
+        """加入聊天室（支持 match_id 或 user_id）"""
         try:
-            match_id = data.get('match_id')
+            from flask import request
+            room_id = data.get('match_id')  # 可能是 match_id 或對方的 user_id
             user_id = data.get('user_id')
             
-            if not match_id:
-                return {'error': '缺少 match_id'}
+            if not room_id:
+                logger.error('加入聊天室失敗: 缺少 room_id')
+                return {'error': '缺少 room_id'}
             
-            room = f'chat_{match_id}'
-            join_room(room)
-            
-            logger.info(f'用戶 {user_id} 加入聊天室 {room}')
-            
-            # 通知房間內其他人
-            emit('user_joined', {
-                'user_id': user_id,
-                'match_id': match_id,
-                'timestamp': datetime.utcnow().isoformat()
-            }, room=room, skip_sid=True)
-            
-            return {'success': True, 'room': room}
+            # 判斷 room_id 是 match_id 還是 user_id
+            # 如果是 user_id（對方 ID），創建標準化的房間名
+            with app.app_context():
+                match = Match.query.get(room_id)
+                if match:
+                    # 是 match_id
+                    room = f'chat_{room_id}'
+                else:
+                    # 是 user_id（對方的用戶 ID），創建標準化房間名
+                    # 使用較小的 ID 在前，確保雙方進入同一個房間
+                    ids = sorted([user_id, room_id])
+                    room = f'chat_user_{ids[0]}_{ids[1]}'
+                
+                join_room(room)
+                
+                logger.info(f'✅ 用戶 {user_id} (SID: {request.sid}) 已加入聊天室 {room}')
+                
+                # 通知房間內其他人
+                emit('user_joined', {
+                    'user_id': user_id,
+                    'room_id': room_id,
+                    'timestamp': datetime.utcnow().isoformat()
+                }, room=room, skip_sid=True)
+                
+                return {'success': True, 'room': room}
             
         except Exception as e:
-            logger.error(f'加入聊天室錯誤: {str(e)}')
+            logger.error(f'❌ 加入聊天室錯誤: {str(e)}')
             return {'error': str(e)}
     
     @socketio.on('leave_chat')
@@ -123,35 +156,56 @@ def register_socketio_events(socketio, app):
     
     @socketio.on('send_message')
     def handle_send_message(data):
-        """發送聊天訊息"""
+        """發送聊天訊息（支持 match 或 user-to-user）"""
         try:
+            from flask import request
             with app.app_context():
-                match_id = data.get('match_id')
+                room_id = data.get('match_id')  # 可能是 match_id 或對方的 user_id
                 sender_id = data.get('sender_id')
                 content = data.get('content')
                 message_type = data.get('message_type', 'text')
                 
+                logger.info(f'📨 收到訊息請求: room_id={room_id}, sender_id={sender_id}, SID={request.sid}')
+                
                 # 驗證參數
-                if not all([match_id, sender_id, content]):
+                if not all([room_id, sender_id, content]):
+                    logger.error('❌ 缺少必要參數')
                     return {'error': '缺少必要參數'}
                 
-                # 驗證媒合是否存在
-                match = Match.query.get(match_id)
-                if not match:
-                    return {'error': '媒合不存在'}
+                # 判斷 room_id 是 match_id 還是 user_id
+                match = Match.query.get(room_id)
+                receiver_id = None
+                actual_match_id = None
                 
-                # 驗證發送者是否為媒合參與者
-                if sender_id not in [match.user_a, match.user_b]:
-                    return {'error': '無權限發送訊息'}
-                
-                # 確定接收者 ID（媒合中的另一方）
-                receiver_id = match.user_b if match.user_a == sender_id else match.user_a
+                if match:
+                    # 是 match_id
+                    actual_match_id = room_id
+                    # 驗證發送者是否為媒合參與者
+                    if sender_id not in [match.user_a, match.user_b]:
+                        logger.error(f'❌ 無權限發送訊息: sender_id={sender_id}')
+                        return {'error': '無權限發送訊息'}
+                    # 確定接收者 ID（媒合中的另一方）
+                    receiver_id = match.user_b if match.user_a == sender_id else match.user_a
+                    room = f'chat_{actual_match_id}'
+                else:
+                    # room_id 是對方的 user_id（陌生訊息）
+                    receiver_id = room_id
+                    actual_match_id = None  # 沒有 match
+                    # 創建標準化房間名
+                    ids = sorted([sender_id, receiver_id])
+                    room = f'chat_user_{ids[0]}_{ids[1]}'
+                    
+                    # 驗證接收者存在
+                    receiver = User.query.get(receiver_id)
+                    if not receiver:
+                        logger.error(f'❌ 接收者不存在: receiver_id={receiver_id}')
+                        return {'error': '接收者不存在'}
                 
                 # 儲存訊息到資料庫
                 message = ChatMessage(
-                    match_id=match_id,
+                    match_id=actual_match_id,  # 可能為 None（陌生訊息）
                     sender_id=sender_id,
-                    receiver_id=receiver_id,  # 添加接收者 ID
+                    receiver_id=receiver_id,
                     content=content,
                     message_type=message_type,
                     status='sent'
@@ -159,27 +213,30 @@ def register_socketio_events(socketio, app):
                 db.session.add(message)
                 db.session.commit()
                 
+                logger.info(f'✅ 訊息已儲存到資料庫: message_id={message.message_id}, match_id={actual_match_id}')
+                
                 # 獲取發送者資訊
                 sender = User.query.get(sender_id)
                 
                 # 建立訊息資料
                 message_data = {
                     'message_id': message.message_id,
-                    'match_id': match_id,
+                    'match_id': actual_match_id,  # 可能為 None
                     'sender_id': sender_id,
+                    'receiver_id': receiver_id,  # 添加接收者 ID 供前端識別
                     'sender_name': sender.name if sender else 'Unknown',
                     'sender_avatar': sender.profile_picture if sender else None,
                     'content': content,
                     'message_type': message_type,
-                    'timestamp': message.timestamp.isoformat(),
+                    'timestamp': message.timestamp.isoformat() + 'Z',  # 添加 Z 表示 UTC
                     'status': 'sent'
                 }
                 
-                # 廣播到聊天室
-                room = f'chat_{match_id}'
-                emit('new_message', message_data, room=room)
+                # 廣播到聊天室（排除發送者，因為發送者已經通過 callback 收到訊息）
+                # room 已在上面計算過了
+                emit('new_message', message_data, room=room, skip_sid=True)
                 
-                logger.info(f'訊息已發送到聊天室 {room}')
+                logger.info(f'📢 訊息已廣播到聊天室 {room} (skip_sid=True, 排除發送者 SID={request.sid})')
                 
                 return {'success': True, 'message': message_data}
                 
@@ -281,7 +338,7 @@ def register_socketio_events(socketio, app):
                     } if sender else None,
                     'message': message,
                     'message_type': message_type,
-                    'created_at': discussion.created_at.isoformat()
+                    'created_at': discussion.created_at.isoformat() + 'Z'  # 添加 Z 表示 UTC
                 }
                 
                 # 廣播到活動討論室

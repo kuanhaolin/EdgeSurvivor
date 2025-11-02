@@ -28,8 +28,8 @@
             </el-input>
           </el-form-item>
           
-          <el-form-item label="活動類型">
-            <el-select v-model="filterType" placeholder="全部" clearable>
+          <el-form-item label="類型">
+            <el-select v-model="filterType" placeholder="全部" clearable style="min-width: 150px;">
               <el-option label="全部" value="" />
               <el-option label="登山" value="hiking" />
               <el-option label="露營" value="camping" />
@@ -40,7 +40,7 @@
           </el-form-item>
           
           <el-form-item label="狀態">
-            <el-select v-model="filterStatus" placeholder="全部" clearable>
+            <el-select v-model="filterStatus" placeholder="全部" clearable style="min-width: 150px;">
               <el-option label="全部" value="" />
               <el-option label="籌備中" value="planning" />
               <el-option label="招募中" value="recruiting" />
@@ -54,10 +54,83 @@
       
       <!-- 活動列表 -->
       <el-tabs v-model="activeTab" class="activities-tabs">
+        <el-tab-pane label="我的所有活動" name="all">
+          <el-row :gutter="20">
+            <el-col
+              v-for="activity in filteredAllActivities"
+              :key="activity.id"
+              :xs="24"
+              :sm="12"
+              :md="8"
+              :lg="6"
+            >
+              <el-card class="activity-card" shadow="hover">
+                <template #header>
+                  <div class="activity-header">
+                    <span class="activity-title">{{ activity.title }}</span>
+                    <el-tag :type="getStatusType(activity.status)">
+                      {{ getStatusText(activity.status) }}
+                    </el-tag>
+                  </div>
+                </template>
+                
+                <div class="activity-content">
+                  <div class="activity-info">
+                    <el-icon><User /></el-icon>
+                    <span>{{ activity.creatorName }}</span>
+                    <el-tag v-if="activity.isCreator" type="success" size="small" style="margin-left: 8px;">創建者</el-tag>
+                  </div>
+                  <div class="activity-info">
+                    <el-icon><Location /></el-icon>
+                    <span>{{ activity.location }}</span>
+                  </div>
+                  <div class="activity-info">
+                    <el-icon><Calendar /></el-icon>
+                    <span>{{ activity.date }}</span>
+                  </div>
+                  <div class="activity-info">
+                    <el-icon><UserFilled /></el-icon>
+                    <span>{{ activity.currentMembers }}/{{ activity.maxMembers }} 人</span>
+                  </div>
+                  <p class="activity-description">{{ activity.description }}</p>
+                </div>
+                
+                <template #footer>
+                  <div class="card-footer-actions">
+                    <el-button size="small" @click="viewActivity(activity.id)">
+                      查看詳情
+                    </el-button>
+                    <el-button 
+                      v-if="activity.isCreator" 
+                      size="small" 
+                      type="primary" 
+                      @click="editActivity(activity.id)"
+                    >
+                      編輯
+                    </el-button>
+                    <el-button 
+                      v-else
+                      size="small" 
+                      type="success"
+                      disabled
+                    >
+                      已參加
+                    </el-button>
+                  </div>
+                </template>
+              </el-card>
+            </el-col>
+          </el-row>
+          
+          <el-empty v-if="filteredAllActivities.length === 0" description="還沒有任何活動">
+            <el-button type="primary" @click="showCreateDialog = true">創建第一個活動</el-button>
+          </el-empty>
+        </el-tab-pane>
+        
         <el-tab-pane label="我創建的活動" name="created">
           <el-row :gutter="20">
             <el-col
-              v-for="activity in createdActivities"
+              v-for="activity in filteredCreatedActivities"
               :key="activity.id"
               :xs="24"
               :sm="12"
@@ -112,7 +185,7 @@
             </el-col>
           </el-row>
           
-          <el-empty v-if="createdActivities.length === 0" description="還沒有創建任何活動">
+          <el-empty v-if="filteredCreatedActivities.length === 0" description="還沒有創建任何活動">
             <el-button type="primary" @click="showCreateDialog = true">創建第一個活動</el-button>
           </el-empty>
         </el-tab-pane>
@@ -120,7 +193,7 @@
         <el-tab-pane label="我參加的活動" name="joined">
           <el-row :gutter="20">
             <el-col
-              v-for="activity in joinedActivities"
+              v-for="activity in filteredJoinedActivities"
               :key="activity.id"
               :xs="24"
               :sm="12"
@@ -162,7 +235,7 @@
             </el-col>
           </el-row>
           
-          <el-empty v-if="joinedActivities.length === 0" description="還沒有參加任何活動">
+          <el-empty v-if="filteredJoinedActivities.length === 0" description="還沒有參加任何活動">
             <el-button type="success" @click="activeTab = 'discover'">探索活動</el-button>
           </el-empty>
         </el-tab-pane>
@@ -170,7 +243,7 @@
         <el-tab-pane label="探索活動" name="discover">
           <el-row :gutter="20">
             <el-col
-              v-for="activity in discoverActivities"
+              v-for="activity in filteredDiscoverActivities"
               :key="activity.id"
               :xs="24"
               :sm="12"
@@ -181,7 +254,9 @@
                 <template #header>
                   <div class="activity-header">
                     <span class="activity-title">{{ activity.title }}</span>
-                    <el-tag type="success">招募中</el-tag>
+                    <el-tag :type="getStatusType(activity.status)">
+                      {{ getStatusText(activity.status) }}
+                    </el-tag>
                   </div>
                 </template>
                 
@@ -206,15 +281,23 @@
                 </div>
                 
                 <template #footer>
-                  <el-button type="success" size="small" style="width: 100%" @click="joinActivity(activity.id)">
-                    申請加入
-                  </el-button>
+                  <div class="card-footer-actions">
+                    <el-button size="small" @click="viewActivity(activity.id)">
+                      查看詳情
+                    </el-button>
+                    <el-button size="small" type="info" @click="messageCreator(activity)">
+                      詢問資訊
+                    </el-button>
+                    <el-button class="apply-btn" type="success" size="small" @click="joinActivity(activity.id)">
+                      申請加入
+                    </el-button>
+                  </div>
                 </template>
               </el-card>
             </el-col>
           </el-row>
           
-          <el-empty v-if="discoverActivities.length === 0" description="目前沒有可加入的活動" />
+          <el-empty v-if="filteredDiscoverActivities.length === 0" description="目前沒有可加入的活動" />
         </el-tab-pane>
       </el-tabs>
     </div>
@@ -246,9 +329,11 @@
         
         <el-form-item label="活動日期" required>
           <el-date-picker
-            v-model="newActivity.date"
-            type="date"
-            placeholder="選擇日期"
+            v-model="newActivity.dateRange"
+            type="daterange"
+            range-separator="到"
+            start-placeholder="開始日期"
+            end-placeholder="結束日期"
             style="width: 100%"
           />
         </el-form-item>
@@ -293,7 +378,9 @@
             {{ selectedActivity.creatorName }}
           </el-descriptions-item>
           <el-descriptions-item label="活動說明" :span="2">
-            {{ selectedActivity.description || '無說明' }}
+            <div class="activity-description-full">
+              {{ selectedActivity.description || '無說明' }}
+            </div>
           </el-descriptions-item>
         </el-descriptions>
         
@@ -393,8 +480,8 @@ import axios from '@/utils/axios'
 
 const router = useRouter()
 
-// 當前標籤頁
-const activeTab = ref('created')
+// 當前標籤頁（預設顯示所有活動）
+const activeTab = ref('all')
 
 // 搜尋和篩選
 const searchQuery = ref('')
@@ -419,7 +506,7 @@ const activityForm = reactive({
   title: '',
   type: '',
   location: '',
-  date: '',
+  dateRange: [],  // 改為日期範圍陣列 [startDate, endDate]
   maxMembers: 5,
   description: ''
 })
@@ -494,16 +581,37 @@ const loadActivities = async () => {
 
 // 格式化活動資料
 const formatActivity = (activity) => {
+  const startDate = activity.start_date || activity.date || activity.created_at
+  const endDate = activity.end_date
+  
+  // 格式化日期顯示
+  let dateDisplay = '待定'
+  if (startDate && endDate) {
+    const start = new Date(startDate).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
+    const end = new Date(endDate).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
+    if (start === end) {
+      dateDisplay = start
+    } else {
+      dateDisplay = `${start} - ${end}`
+    }
+  } else if (startDate) {
+    dateDisplay = new Date(startDate).toLocaleDateString('zh-TW')
+  }
+  
   return {
     id: activity.activity_id,
     title: activity.title,
     type: activity.category,  // 後端返回 category
     location: activity.location,
-    date: activity.date ? new Date(activity.date).toLocaleDateString('zh-TW') : '待定',
+    date: dateDisplay,
+    rawDate: startDate,  // 保留原始開始日期用於排序
+    startDate: startDate,
+    endDate: endDate,
     currentMembers: activity.current_participants || 1,  // 後端返回 current_participants
     maxMembers: activity.max_participants,  // 後端返回 max_participants
     description: activity.description || '',
     creatorName: activity.creator?.name || '未知',
+    creatorId: activity.creator?.user_id || null,
     status: activity.status,
     pendingCount: activity.pending_count || 0  // 待審核數量
   }
@@ -513,6 +621,52 @@ const formatActivity = (activity) => {
 onMounted(() => {
   loadActivities()
 })
+
+// ------ 搜尋與篩選（前端）------
+const normalized = (s) => (s || '').toString().toLowerCase()
+
+const statusMatches = (status) => {
+  if (!filterStatus.value) return true
+  // 將「招募中」視為 recruiting/active/open 的統稱
+  if (filterStatus.value === 'recruiting') {
+    return ['recruiting', 'active', 'open'].includes(status)
+  }
+  return status === filterStatus.value
+}
+
+const typeMatches = (type) => {
+  if (!filterType.value) return true
+  return type === filterType.value
+}
+
+const textMatches = (activity) => {
+  if (!searchQuery.value) return true
+  const q = normalized(searchQuery.value)
+  return [activity.title, activity.location, activity.description, activity.creatorName]
+    .some((f) => normalized(f).includes(q))
+}
+
+const filterList = (list) => {
+  return list.filter((a) => statusMatches(a.status) && typeMatches(a.type) && textMatches(a))
+}
+
+// 合併所有活動（創建 + 參加）
+const allActivities = computed(() => {
+  const created = createdActivities.value.map(a => ({ ...a, isCreator: true }))
+  const joined = joinedActivities.value.map(a => ({ ...a, isCreator: false }))
+  
+  // 合併並按日期排序（最新在前）
+  return [...created, ...joined].sort((a, b) => {
+    const dateA = new Date(a.rawDate || a.date)
+    const dateB = new Date(b.rawDate || b.date)
+    return dateB - dateA
+  })
+})
+
+const filteredAllActivities = computed(() => filterList(allActivities.value))
+const filteredCreatedActivities = computed(() => filterList(createdActivities.value))
+const filteredJoinedActivities = computed(() => filterList(joinedActivities.value))
+const filteredDiscoverActivities = computed(() => filterList(discoverActivities.value))
 
 // 狀態類型對應
 const getStatusType = (status) => {
@@ -584,13 +738,33 @@ const editActivity = (id) => {
   activityForm.title = activity.title
   activityForm.type = activity.type
   activityForm.location = activity.location
-  activityForm.date = activity.date
+  
+  // 處理日期範圍
+  if (activity.startDate && activity.endDate) {
+    activityForm.dateRange = [new Date(activity.startDate), new Date(activity.endDate)]
+  } else if (activity.rawDate) {
+    // 如果只有單一日期，設為同一天
+    const date = new Date(activity.rawDate)
+    activityForm.dateRange = [date, date]
+  } else {
+    activityForm.dateRange = []
+  }
+  
   activityForm.maxMembers = activity.maxMembers
   activityForm.description = activity.description
   
   // 設置為編輯模式
   editingActivityId.value = id
   showCreateDialog.value = true
+}
+
+// 詢問創建者（先發訊息溝通）
+const messageCreator = (activity) => {
+  if (!activity?.creatorId) return
+  router.push({
+    path: '/chat',
+    query: { userId: activity.creatorId }
+  })
 }
 
 // 刪除活動
@@ -696,12 +870,14 @@ const rejectApplicant = async (participantId) => {
 
 // 創建/更新活動
 const createActivity = async () => {
-  if (!activityForm.title || !activityForm.type || !activityForm.location || !activityForm.date) {
+  if (!activityForm.title || !activityForm.type || !activityForm.location || !activityForm.dateRange || activityForm.dateRange.length !== 2) {
     ElMessage.error('請填寫所有必填欄位')
     return
   }
   
   try {
+    const [startDate, endDate] = activityForm.dateRange
+    
     if (editingActivityId.value) {
       // 編輯模式
       console.log('更新活動:', editingActivityId.value, activityForm)
@@ -710,7 +886,8 @@ const createActivity = async () => {
         title: activityForm.title,
         type: activityForm.type,
         location: activityForm.location,
-        start_date: activityForm.date,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
         max_members: activityForm.maxMembers,
         description: activityForm.description
       })
@@ -725,7 +902,8 @@ const createActivity = async () => {
         title: activityForm.title,
         type: activityForm.type,
         location: activityForm.location,
-        start_date: activityForm.date,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
         max_members: activityForm.maxMembers,
         description: activityForm.description,
         status: 'recruiting'
@@ -741,7 +919,7 @@ const createActivity = async () => {
     activityForm.title = ''
     activityForm.type = ''
     activityForm.location = ''
-    activityForm.date = ''
+    activityForm.dateRange = []
     activityForm.maxMembers = 5
     activityForm.description = ''
     editingActivityId.value = null
@@ -809,11 +987,42 @@ const createActivity = async () => {
   color: #909399;
   font-size: 14px;
   line-height: 1.6;
+  /* 即使沒有描述也預留兩行的高度，讓按鈕區對齊 */
+  min-height: calc(1.6em * 2);
+  /* 讓長字/URL也能換行 */
+  word-break: break-word;
+  overflow-wrap: anywhere;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
+  line-clamp: 2; /* 標準屬性，部分瀏覽器支援 */
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+/* 行動優先：預設單欄堆疊（最穩定，不影響其他版面） */
+.card-footer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-footer-actions :deep(.el-button) {
+  width: 100%;
+}
+
+/* 消除 Element Plus 預設的相鄰按鈕 margin-left，避免第二行看起來縮排 */
+.card-footer-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
+/* 活動詳情中的完整描述：保留使用者輸入的換行並自動換行 */
+.activity-description-full {
+  white-space: pre-wrap; /* 保留\n 並自動換行 */
+  word-break: break-word; /* 長字或 URL 時安全換行 */
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  color: #606266;
 }
 
 @media (max-width: 768px) {

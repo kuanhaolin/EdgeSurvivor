@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(120) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     privacy_setting VARCHAR(20) DEFAULT 'public',
+    social_privacy VARCHAR(20) DEFAULT 'public',
     location VARCHAR(100),
     profile_picture VARCHAR(255),
     bio TEXT,
@@ -22,6 +23,20 @@ CREATE TABLE IF NOT EXISTS users (
     is_verified BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
     last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    
+    -- 社群帳號
+    instagram_url VARCHAR(255),
+    facebook_url VARCHAR(255),
+    line_id VARCHAR(100),
+    twitter_url VARCHAR(255),
+    
+    -- 兩步驟驗證
+    two_factor_enabled TINYINT(1) DEFAULT 0,
+    two_factor_secret VARCHAR(32),
+    
+    -- 評價統計
+    rating_count INT DEFAULT 0,
+    
     INDEX idx_email (email),
     INDEX idx_location (location)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

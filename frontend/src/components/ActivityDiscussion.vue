@@ -210,20 +210,20 @@ const scrollToBottom = () => {
 }
 
 // 組件掛載時載入討論
-onMounted(() => {
+onMounted(async () => {
   loadDiscussions()
   
   // 連線到 Socket.IO (如果還沒連線)
   if (!socketService.isConnected()) {
     socketService.connect()
+    // 等待連接建立
+    await new Promise(resolve => setTimeout(resolve, 500))
   }
   
-  // 加入活動討論室
-  socketService.joinActivityDiscussion(props.activityId, currentUserId.value)
-  
+  // 先設置監聽器，再加入房間
   // 監聽新討論訊息
   socketService.onNewDiscussion((discussion) => {
-    console.log('收到新討論訊息:', discussion)
+    console.log('📨 收到新討論訊息:', discussion)
     
     // 檢查是否為當前活動的訊息
     if (discussion.activity_id === props.activityId) {
@@ -236,11 +236,41 @@ onMounted(() => {
       })
     }
   })
+  
+  // 監聽討論訊息刪除事件
+  socketService.onDiscussionDeleted((data) => {
+    console.log('🗑️ [ActivityDiscussion] 收到訊息刪除事件:', data)
+    console.log('🗑️ [ActivityDiscussion] 當前活動ID:', props.activityId)
+    console.log('🗑️ [ActivityDiscussion] 當前討論列表:', discussions.value.map(d => d.discussion_id))
+    
+    // 檢查是否為當前活動的訊息
+    if (data.activity_id === props.activityId) {
+      console.log('✅ [ActivityDiscussion] 是當前活動的刪除事件')
+      // 從列表中移除該訊息
+      const index = discussions.value.findIndex(d => d.discussion_id === data.discussion_id)
+      console.log('🔍 [ActivityDiscussion] 查找索引結果:', index)
+      if (index > -1) {
+        discussions.value.splice(index, 1)
+        console.log('✅ [ActivityDiscussion] 已從列表移除訊息:', data.discussion_id)
+        console.log('📋 [ActivityDiscussion] 移除後的列表:', discussions.value.map(d => d.discussion_id))
+      } else {
+        console.log('⚠️ [ActivityDiscussion] 在列表中找不到要刪除的訊息:', data.discussion_id)
+        console.log('📋 [ActivityDiscussion] 完整討論列表:', JSON.stringify(discussions.value, null, 2))
+      }
+    } else {
+      console.log('ℹ️ [ActivityDiscussion] 刪除事件不屬於當前活動 (事件:', data.activity_id, ', 當前:', props.activityId, ')')
+    }
+  })
+  
+  // 加入活動討論室（在設置監聽器之後）
+  socketService.joinActivityDiscussion(props.activityId, currentUserId.value)
+  console.log('✅ 已設置討論區監聽器並加入房間')
 })
 
 // 組件卸載時離開討論室
 onUnmounted(() => {
   socketService.leaveActivityDiscussion(props.activityId)
+  // Socket.IO 事件會在斷開連線時自動清理，不需要手動移除
 })
 </script>
 
@@ -255,6 +285,7 @@ onUnmounted(() => {
   height: 600px;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* 防止內容溢出 */
 }
 
 .discussion-card :deep(.el-card__body) {
@@ -262,6 +293,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding: 0;
+  overflow: hidden; /* 防止內容溢出 */
 }
 
 .messages-area {
@@ -269,6 +301,7 @@ onUnmounted(() => {
   overflow-y: auto;
   padding: 20px;
   background-color: #f5f7fa;
+  min-height: 0; /* 允許 flex 子項收縮 */
 }
 
 .message-item {
@@ -333,6 +366,7 @@ onUnmounted(() => {
   display: flex;
   gap: 10px;
   align-items: flex-end;
+  flex-shrink: 0; /* 防止輸入區域被壓縮 */
 }
 
 .send-area .el-input {

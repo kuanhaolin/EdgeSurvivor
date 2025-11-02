@@ -14,7 +14,17 @@ def get_conversations():
     try:
         current_user_id = int(get_jwt_identity())
         
-        # 從 matches 表獲取所有相關的媒合記錄
+        # 獲取在線用戶列表（從 socketio_events 導入）
+        try:
+            from socketio_events import online_users
+            online_user_ids = list(online_users.keys())
+        except:
+            online_user_ids = []
+        
+        conversations = []
+        processed_users = set()  # 記錄已處理的用戶，避免重複
+        
+        # 方法1：從 matches 表獲取已接受的媒合記錄
         from models.match import Match
         matches = Match.query.filter(
             or_(
@@ -24,14 +34,6 @@ def get_conversations():
             Match.status.in_(['accepted', 'confirmed'])
         ).all()
         
-        # 獲取在線用戶列表（從 socketio_events 導入）
-        try:
-            from socketio_events import online_users
-            online_user_ids = list(online_users.keys())
-        except:
-            online_user_ids = []
-        
-        conversations = []
         for match in matches:
             # 獲取對方用戶
             other_user_id = match.user_b if match.user_a == current_user_id else match.user_a
@@ -68,6 +70,75 @@ def get_conversations():
                 } if last_message else None,
                 'unread_count': unread_count
             })
+            processed_users.add(other_user_id)
+        
+        # 方法2：從訊息表獲取有訊息往來但沒有 accepted match 的對話
+        # 查詢所有與我有訊息往來的用戶
+        sent_to_users = db.session.query(ChatMessage.receiver_id).filter(
+            ChatMessage.sender_id == current_user_id
+        ).distinct().all()
+        
+        received_from_users = db.session.query(ChatMessage.sender_id).filter(
+            ChatMessage.receiver_id == current_user_id
+        ).distinct().all()
+        
+        # 合併所有有訊息往來的用戶
+        message_user_ids = set([u[0] for u in sent_to_users] + [u[0] for u in received_from_users])
+        
+        # 只處理還沒有在對話列表中的用戶
+        for other_user_id in message_user_ids:
+            if other_user_id in processed_users:
+                continue
+                
+            other_user = User.query.get(other_user_id)
+            if not other_user:
+                continue
+            
+            # 獲取最後一條訊息（使用 sender_id 和 receiver_id）
+            last_message = ChatMessage.query.filter(
+                or_(
+                    and_(ChatMessage.sender_id == current_user_id, ChatMessage.receiver_id == other_user_id),
+                    and_(ChatMessage.sender_id == other_user_id, ChatMessage.receiver_id == current_user_id)
+                )
+            ).order_by(ChatMessage.timestamp.desc()).first()
+            
+            # 計算未讀訊息數量（對方發給我的未讀訊息）
+            unread_count = ChatMessage.query.filter(
+                ChatMessage.sender_id == other_user_id,
+                ChatMessage.receiver_id == current_user_id,
+                ChatMessage.status != 'read'
+            ).count()
+            
+            # 檢查是否有 pending match（顯示提示）
+            pending_match = Match.query.filter(
+                or_(
+                    and_(Match.user_a == current_user_id, Match.user_b == other_user_id),
+                    and_(Match.user_a == other_user_id, Match.user_b == current_user_id)
+                ),
+                Match.status == 'pending'
+            ).first()
+            
+            user_dict = other_user.to_dict()
+            conversations.append({
+                'match_id': None,  # 沒有 accepted match
+                'activity_id': None,
+                'has_pending_match': pending_match is not None,
+                'other_user': {
+                    'user_id': user_dict['user_id'],
+                    'name': user_dict['name'],
+                    'avatar': user_dict['avatar'],
+                    'is_online': other_user_id in online_user_ids
+                },
+                'last_message': {
+                    'content': last_message.content if last_message else '',
+                    'created_at': last_message.timestamp.isoformat() if last_message else None
+                } if last_message else None,
+                'unread_count': unread_count
+            })
+            processed_users.add(other_user_id)
+        
+        # 按最後訊息時間排序
+        conversations.sort(key=lambda x: x['last_message']['created_at'] if x['last_message'] and x['last_message']['created_at'] else '', reverse=True)
         
         return jsonify({
             'conversations': conversations

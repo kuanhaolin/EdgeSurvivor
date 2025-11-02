@@ -30,7 +30,7 @@
         
         <el-col :xs="24" :sm="12" :md="6">
           <el-card class="stat-card">
-            <el-statistic title="媒合成功" :value="stats.matches">
+            <el-statistic title="好友數量" :value="stats.matches">
               <template #prefix>
                 <el-icon><UserFilled /></el-icon>
               </template>
@@ -50,9 +50,9 @@
         
         <el-col :xs="24" :sm="12" :md="6">
           <el-card class="stat-card">
-            <el-statistic title="旅遊天數" :value="stats.travelDays" suffix="天">
+            <el-statistic title="評價次數" :value="stats.reviews">
               <template #prefix>
-                <el-icon><Location /></el-icon>
+                <el-icon><Star /></el-icon>
               </template>
             </el-statistic>
           </el-card>
@@ -121,9 +121,9 @@
         <el-col :xs="24" :md="12">
           <el-card class="recent-card">
             <template #header>
-              <span>最新媒合</span>
+              <span>最新好友</span>
             </template>
-            <el-empty v-if="recentMatches.length === 0" description="還沒有媒合記錄">
+            <el-empty v-if="recentMatches.length === 0" description="還沒有好友記錄">
               <el-button type="success" @click="goToMatches">尋找旅伴</el-button>
             </el-empty>
             <div v-else class="matches-list">
@@ -146,14 +146,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   Calendar,
   UserFilled,
   ChatDotRound,
-  Location,
+  Star,
   Plus,
   Search,
   ChatLineRound,
@@ -161,6 +161,7 @@ import {
 } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
+import socketService from '@/services/socket'
 
 const router = useRouter()
 
@@ -198,7 +199,8 @@ const stats = ref({
   activities: 0,
   matches: 0,
   unreadMessages: 0,
-  travelDays: 0
+  travelDays: 0,
+  reviews: 0
 })
 
 // 最近的活動
@@ -216,6 +218,33 @@ onMounted(() => {
   
   // 從 API 載入實際數據
   loadDashboardData()
+  
+  // 連接 Socket.IO 並監聽新訊息
+  socketService.connect()
+  
+  // 監聽新訊息事件
+  socketService.onNewMessage((message) => {
+    // 當收到新訊息時，重新載入未讀數量
+    const currentUserId = user.value?.user_id
+    if (currentUserId && message.receiver_id === currentUserId) {
+      loadUnreadCount()
+    }
+  })
+  
+  // 監聽訊息已讀事件（如果有實作）
+  if (socketService.socket) {
+    socketService.socket.on('message_read', () => {
+      loadUnreadCount()
+    })
+  }
+})
+
+// 清理
+onUnmounted(() => {
+  // 移除監聽器
+  if (socketService.socket) {
+    socketService.socket.off('message_read')
+  }
 })
 
 const loadDashboardData = async () => {
@@ -226,6 +255,9 @@ const loadDashboardData = async () => {
       stats.value = statsResponse.data.stats
     }
     
+    // 載入未讀訊息數量
+    await loadUnreadCount()
+    
     // 載入最近的活動
     const activitiesResponse = await axios.get('/users/recent-activities')
     if (activitiesResponse.data && activitiesResponse.data.activities) {
@@ -233,8 +265,14 @@ const loadDashboardData = async () => {
         id: activity.activity_id,
         title: activity.title,
         location: activity.location,
-        date: formatDate(activity.date)
+        date: formatDate(activity.start_date || activity.date || activity.created_at),
+        rawDate: activity.start_date || activity.date || activity.created_at
       }))
+      
+      // 確保按時間由新到舊排序
+      recentActivities.value.sort((a, b) => {
+        return new Date(b.rawDate) - new Date(a.rawDate)
+      })
     }
     
     // TODO: 載入最新媒合數據
@@ -243,6 +281,18 @@ const loadDashboardData = async () => {
   } catch (error) {
     console.error('載入 Dashboard 數據失敗:', error)
     ElMessage.error('載入數據失敗')
+  }
+}
+
+// 載入未讀訊息數量
+const loadUnreadCount = async () => {
+  try {
+    const response = await axios.get('/chat/unread-count')
+    if (response.data) {
+      stats.value.unreadMessages = response.data.unread_count || 0
+    }
+  } catch (error) {
+    console.error('載入未讀訊息數量失敗:', error)
   }
 }
 

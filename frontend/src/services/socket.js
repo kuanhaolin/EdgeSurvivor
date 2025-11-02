@@ -52,7 +52,9 @@ class SocketService {
     this.socket.on('connect', () => {
       this.connected = true
       console.log('✅ Socket.IO 連線成功', this.socket.id)
-      // 靜默連線，不顯示提示
+      // 發送用戶就緒事件（避免 Werkzeug 在 connect 時 emit 錯誤）
+      this.socket.emit('user_ready')
+      console.log('📡 已發送 user_ready 事件')
     })
 
     // 連線錯誤
@@ -180,6 +182,14 @@ class SocketService {
   onNewMessage(callback) {
     if (!this.socket) return
 
+    // remove existing listener to prevent duplicate callbacks when component
+    // mounts/unmounts multiple times
+    try {
+      this.socket.off('new_message')
+    } catch (e) {
+      // ignore if not supported
+    }
+
     this.socket.on('new_message', (message) => {
       console.log('收到新訊息:', message)
       callback(message)
@@ -283,6 +293,30 @@ class SocketService {
       console.log('收到新討論訊息:', discussion)
       callback(discussion)
     })
+  }
+
+  /**
+   * 監聽討論訊息刪除事件
+   */
+  onDiscussionDeleted(callback) {
+    if (!this.socket) {
+      console.error('❌ [SocketService] Socket 未初始化，無法註冊 discussion_deleted 監聽器')
+      return
+    }
+
+    console.log('📡 [SocketService] 正在註冊 discussion_deleted 監聽器...')
+    
+    // 先移除舊的監聽器，避免重複
+    this.socket.off('discussion_deleted')
+    
+    this.socket.on('discussion_deleted', (data) => {
+      console.log('🔔 [SocketService] 收到討論刪除事件:', data)
+      console.log('🔔 [SocketService] Socket ID:', this.socket.id)
+      console.log('🔔 [SocketService] Connected:', this.connected)
+      callback(data)
+    })
+    
+    console.log('✅ [SocketService] discussion_deleted 監聽器已註冊')
   }
 
   /**

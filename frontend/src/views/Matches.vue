@@ -3,7 +3,7 @@
     <NavBar />
     
     <div class="matches-container">
-      <el-page-header @back="goBack" content="旅伴媒合">
+      <el-page-header @back="goBack" content="旅伴交友">
         <template #extra>
           <el-button type="success" @click="findMatches">
             <el-icon><Search /></el-icon>
@@ -39,16 +39,39 @@
           <el-form-item label="地區">
             <el-input v-model="filters.location" placeholder="例如：台北" clearable />
           </el-form-item>
+          
+          <el-form-item label="興趣">
+            <el-select
+              v-model="filters.interests"
+              multiple
+              filterable
+              allow-create
+              default-first-option
+              placeholder="選擇或輸入興趣"
+              style="min-width: 260px"
+            >
+              <el-option
+                v-for="interest in commonInterests"
+                :key="interest"
+                :label="interest"
+                :value="interest"
+              />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item>
+            <el-switch v-model="filters.verifiedOnly" inline-prompt active-text="只看已驗證" />
+          </el-form-item>
         </el-form>
       </el-card>
       
-      <!-- 媒合列表標籤頁 -->
+      <!-- 交友列表標籤頁 -->
       <el-tabs v-model="activeTab" class="matches-tabs">
-        <!-- 推薦媒合 -->
-        <el-tab-pane label="推薦媒合" name="recommended">
+        <!-- 推薦交友 -->
+        <el-tab-pane label="推薦交友" name="recommended">
           <el-row :gutter="20">
             <el-col
-              v-for="match in recommendedMatches"
+              v-for="match in filteredRecommendedMatches"
               :key="match.id"
               :xs="24"
               :sm="12"
@@ -86,6 +109,53 @@
                       {{ interest }}
                     </el-tag>
                   </div>
+                  
+                  <!-- 社群帳號 -->
+                  <div v-if="match.social_links" class="match-social-links">
+                    <el-button
+                      v-if="match.social_links.instagram"
+                      circle
+                      size="small"
+                      style="background: #E4405F; color: white; border: none;"
+                      @click.stop="openSocialLink(match.social_links.instagram)"
+                      title="Instagram"
+                    >
+                      <el-icon :size="16"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M7.8,2H16.2C19.4,2 22,4.6 22,7.8V16.2A5.8,5.8 0 0,1 16.2,22H7.8C4.6,22 2,19.4 2,16.2V7.8A5.8,5.8 0 0,1 7.8,2M7.6,4A3.6,3.6 0 0,0 4,7.6V16.4C4,18.39 5.61,20 7.6,20H16.4A3.6,3.6 0 0,0 20,16.4V7.6C20,5.61 18.39,4 16.4,4H7.6M17.25,5.5A1.25,1.25 0 0,1 18.5,6.75A1.25,1.25 0 0,1 17.25,8A1.25,1.25 0 0,1 16,6.75A1.25,1.25 0 0,1 17.25,5.5M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z" /></svg></el-icon>
+                    </el-button>
+                    <el-button
+                      v-if="match.social_links.facebook"
+                      circle
+                      size="small"
+                      style="background: #1877F2; color: white; border: none;"
+                      @click.stop="openSocialLink(match.social_links.facebook)"
+                      title="Facebook"
+                    >
+                      <el-icon :size="16"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.04C6.5 2.04 2 6.53 2 12.06C2 17.06 5.66 21.21 10.44 21.96V14.96H7.9V12.06H10.44V9.85C10.44 7.34 11.93 5.96 14.22 5.96C15.31 5.96 16.45 6.15 16.45 6.15V8.62H15.19C13.95 8.62 13.56 9.39 13.56 10.18V12.06H16.34L15.89 14.96H13.56V21.96A10 10 0 0 0 22 12.06C22 6.53 17.5 2.04 12 2.04Z" /></svg></el-icon>
+                    </el-button>
+                    <el-button
+                      v-if="match.social_links.line"
+                      circle
+                      size="small"
+                      style="background: #00B900; color: white; border: none;"
+                      @click.stop="showUserLineQRCode(match)"
+                      title="LINE"
+                    >
+                      <el-icon :size="16"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.365,9.863c.349,0,.698.025,1.041.083,0-5.094-5.098-9.233-11.381-9.233C3.75.713,0,4.853,0,9.948s3.75,9.235,8.988,9.235c1.031,0,2.025-.149,2.949-.43L19.373,24V18.048a6.644,6.644,0,0,0,2.065-4.784A6.618,6.618,0,0,0,19.365,9.863Z" /></svg></el-icon>
+                    </el-button>
+                    <el-button
+                      v-if="match.social_links.twitter"
+                      circle
+                      size="small"
+                      style="background: #000000; color: white; border: none;"
+                      @click.stop="openSocialLink(match.social_links.twitter)"
+                      title="Twitter (X)"
+                    >
+                      <el-icon :size="16"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M22.46,6C21.69,6.35 20.86,6.58 20,6.69C20.88,6.16 21.56,5.32 21.88,4.31C21.05,4.81 20.13,5.16 19.16,5.36C18.37,4.5 17.26,4 16,4C13.65,4 11.73,5.92 11.73,8.29C11.73,8.63 11.77,8.96 11.84,9.27C8.28,9.09 5.11,7.38 3,4.79C2.63,5.42 2.42,6.16 2.42,6.94C2.42,8.43 3.17,9.75 4.33,10.5C3.62,10.5 2.96,10.3 2.38,10C2.38,10 2.38,10 2.38,10.03C2.38,12.11 3.86,13.85 5.82,14.24C5.46,14.34 5.08,14.39 4.69,14.39C4.42,14.39 4.15,14.36 3.89,14.31C4.43,16 6,17.26 7.89,17.29C6.43,18.45 4.58,19.13 2.56,19.13C2.22,19.13 1.88,19.11 1.54,19.07C3.44,20.29 5.70,21 8.12,21C16,21 20.33,14.46 20.33,8.79C20.33,8.6 20.33,8.42 20.32,8.23C21.16,7.63 21.88,6.87 22.46,6Z" /></svg></el-icon>
+                    </el-button>
+                    <div v-if="!match.social_links.instagram && !match.social_links.facebook && !match.social_links.line && !match.social_links.twitter" style="color: #909399; font-size: 12px; text-align: center;">
+                      未公開/未綁定
+                    </div>
+                  </div>
                 </div>
                 
                 <template #footer>
@@ -94,7 +164,7 @@
                       查看資料
                     </el-button>
                     <el-button size="small" type="success" @click="sendMatchRequest(match.id)">
-                      發送媒合
+                      發送交友
                     </el-button>
                   </el-button-group>
                 </template>
@@ -102,7 +172,7 @@
             </el-col>
           </el-row>
           
-          <el-empty v-if="recommendedMatches.length === 0" description="目前沒有推薦的旅伴" />
+          <el-empty v-if="filteredRecommendedMatches.length === 0" description="目前沒有符合條件的旅伴" />
         </el-tab-pane>
         
         <!-- 待回應 -->
@@ -149,7 +219,7 @@
             </el-table-column>
           </el-table>
           
-          <el-empty v-if="pendingMatches.length === 0" description="沒有待回應的媒合請求" />
+          <el-empty v-if="pendingMatches.length === 0" description="沒有待回應的交友請求" />
         </el-tab-pane>
         
         <!-- 已發送 -->
@@ -204,11 +274,11 @@
             </el-table-column>
           </el-table>
           
-          <el-empty v-if="sentMatches.length === 0" description="還沒有發送過媒合請求" />
+          <el-empty v-if="sentMatches.length === 0" description="還沒有發送過交友請求" />
         </el-tab-pane>
         
-        <!-- 已媒合 -->
-        <el-tab-pane label="已媒合" name="matched">
+        <!-- 已成為好友 -->
+        <el-tab-pane label="已成為好友" name="matched">
           <el-row :gutter="20">
             <el-col
               v-for="match in matchedUsers"
@@ -222,7 +292,7 @@
                   <el-avatar :size="60" :src="match.avatar" />
                   <div class="matched-user-info">
                     <h3>{{ match.name }}</h3>
-                    <el-tag size="small" type="success">已媒合</el-tag>
+                    <el-tag size="small" type="success">已成為好友</el-tag>
                   </div>
                 </div>
                 
@@ -247,7 +317,7 @@
             </el-col>
           </el-row>
           
-          <el-empty v-if="matchedUsers.length === 0" description="還沒有成功媒合的旅伴">
+          <el-empty v-if="matchedUsers.length === 0" description="還沒有成為好友的旅伴">
             <el-button type="success" @click="activeTab = 'recommended'">尋找旅伴</el-button>
           </el-empty>
         </el-tab-pane>
@@ -302,11 +372,27 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- LINE QR Code 對話框 -->
+    <el-dialog v-model="showLineQRDialog" :title="`${selectedLineUser?.name} 的 LINE`" width="400px" align-center>
+      <div style="text-align: center;">
+        <div id="matchLineQRCode" style="display: inline-block;"></div>
+        <p style="margin-top: 20px; color: #606266;">
+          掃描此 QR Code 加好友
+        </p>
+        <p style="color: #909399; font-size: 14px;">
+          LINE ID: <strong>{{ selectedLineUser?.lineId }}</strong>
+        </p>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="showLineQRDialog = false">關閉</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -326,16 +412,52 @@ const activeTab = ref('recommended')
 // Dialog state
 const showProfileDialog = ref(false)
 const selectedUser = ref(null)
+const showLineQRDialog = ref(false)
+const selectedLineUser = ref(null)
 
 // 篩選條件
 const filters = ref({
   gender: '',
   ageRange: [20, 40],
-  location: ''
+  location: '',
+  interests: [],
+  verifiedOnly: false
 })
 
-// 推薦媒合
+// 常見興趣清單（可自行擴充）
+const commonInterests = [
+  '登山', '露營', '健行', '旅遊', '攝影',
+  '美食', '咖啡', '閱讀', '電影', '音樂',
+  '運動', '健身', '跑步', '游泳', '瑜伽',
+  '烹飪', '烘焙', '繪畫', '寫作'
+]
+
+// 推薦媒合（原始資料）
 const recommendedMatches = ref([])
+
+// 依前端條件進行即時篩選
+const filteredRecommendedMatches = computed(() => {
+  const gender = filters.value.gender
+  const [minAge, maxAge] = filters.value.ageRange || [18, 65]
+  const location = (filters.value.location || '').toLowerCase()
+  const interests = filters.value.interests || []
+  const verifiedOnly = !!filters.value.verifiedOnly
+
+  return recommendedMatches.value.filter((m) => {
+    if (gender && m.gender !== gender) return false
+    if (typeof m.age === 'number') {
+      if (m.age < minAge || m.age > maxAge) return false
+    }
+    if (location && !(m.location || '').toLowerCase().includes(location)) return false
+    if (verifiedOnly && !m.verified) return false
+    if (interests.length > 0) {
+      const set = new Set((m.interests || []).map(String))
+      const hasAny = interests.some((i) => set.has(String(i)))
+      if (!hasAny) return false
+    }
+    return true
+  })
+})
 
 // 待回應媒合
 const pendingMatches = ref([])
@@ -356,7 +478,9 @@ const loadRecommendedMatches = async () => {
         gender: filters.value.gender,
         min_age: filters.value.ageRange[0],
         max_age: filters.value.ageRange[1],
-        location: filters.value.location
+        location: filters.value.location,
+        interests: filters.value.interests,
+        verified_only: filters.value.verifiedOnly
       }
     })
     
@@ -372,7 +496,8 @@ const loadRecommendedMatches = async () => {
         bio: match.bio || '這個用戶還沒有填寫個人簡介',
         interests: match.interests || [],
         avatar: match.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
-        verified: match.is_verified || false
+        verified: match.is_verified || false,
+        social_links: match.social_links || null
       }))
       
       console.log('推薦媒合列表:', recommendedMatches.value)
@@ -530,122 +655,113 @@ const findMatches = () => {
 }
 
 // 查看個人資料
-const viewProfile = async (id) => {
-  try {
-    const response = await axios.get(`/users/${id}`)
-    
-    if (response.data && response.data.user) {
-      selectedUser.value = response.data.user
-      showProfileDialog.value = true
-    }
-  } catch (error) {
-    console.error('載入用戶資料失敗:', error)
-    ElMessage.error('無法載入用戶資料')
-  }
+const viewProfile = (id) => {
+  // 導航到用戶資料頁面
+  router.push(`/user/${id}`)
 }
 
 // 發送媒合請求
 const sendMatchRequest = async (userId) => {
   try {
-    console.log('發送媒合請求給用戶:', userId)
+    console.log('發送交友請求給用戶:', userId)
     
     const response = await axios.post('/matches', {
       responder_id: userId,
-      activity_id: null,  // 一般媒合不綁定特定活動
+      activity_id: null,  // 一般交友不綁定特定活動
       message: '希望能成為旅伴，一起探索世界！'
     })
     
-    console.log('媒合請求響應:', response.data)
+    console.log('交友請求響應:', response.data)
     
-    ElMessage.success('媒合請求已發送！')
+    ElMessage.success('交友請求已發送！')
     // 從推薦列表中移除已發送請求的用戶
     recommendedMatches.value = recommendedMatches.value.filter(m => m.id !== userId)
   } catch (error) {
-    console.error('發送媒合請求失敗:', error)
+    console.error('發送交友請求失敗:', error)
     if (error.response?.data?.error) {
       ElMessage.error(error.response.data.error)
     } else {
-      ElMessage.error('發送媒合請求失敗')
+      ElMessage.error('發送交友請求失敗')
     }
   }
 }
 
-// 接受媒合
+// 接受交友
 const acceptMatch = async (matchId) => {
   try {
-    console.log('接受媒合:', matchId)
+    console.log('接受交友:', matchId)
     
     const response = await axios.put(`/matches/${matchId}/accept`)
     
     console.log('接受響應:', response.data)
     
-    ElMessage.success('已接受媒合請求！')
+    ElMessage.success('已接受交友請求！')
     loadPendingMatches()
     loadMatchedUsers()
   } catch (error) {
-    console.error('接受媒合失敗:', error)
+    console.error('接受交友失敗:', error)
     if (error.response?.data?.error) {
       ElMessage.error(error.response.data.error)
     } else {
-      ElMessage.error('接受媒合失敗')
+      ElMessage.error('接受交友失敗')
     }
   }
 }
 
-// 拒絕媒合
+// 拒絕交友
 const rejectMatch = async (matchId) => {
   try {
-    await ElMessageBox.confirm('確定要拒絕此媒合請求嗎？', '確認', {
+    await ElMessageBox.confirm('確定要拒絕此交友請求嗎？', '確認', {
       confirmButtonText: '確定',
       cancelButtonText: '取消',
       type: 'warning'
     })
     
-    console.log('拒絕媒合:', matchId)
+    console.log('拒絕交友:', matchId)
     
     const response = await axios.put(`/matches/${matchId}/reject`)
     
     console.log('拒絕響應:', response.data)
     
-    ElMessage.success('已拒絕媒合請求')
+    ElMessage.success('已拒絕交友請求')
     loadPendingMatches()
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('拒絕媒合失敗:', error)
+      console.error('拒絕交友失敗:', error)
       if (error.response?.data?.error) {
         ElMessage.error(error.response.data.error)
       } else {
-        ElMessage.error('拒絕媒合失敗')
+        ElMessage.error('拒絕交友失敗')
       }
     }
   }
 }
 
-// 取消媒合
+// 取消交友
 const cancelMatch = async (matchId) => {
   try {
-    await ElMessageBox.confirm('確定要取消此媒合請求嗎？', '確認', {
+    await ElMessageBox.confirm('確定要取消此交友請求嗎？', '確認', {
       confirmButtonText: '確定',
       cancelButtonText: '取消',
       type: 'warning'
     })
     
-    console.log('取消媒合:', matchId)
+    console.log('取消交友:', matchId)
     
     const response = await axios.delete(`/matches/${matchId}`)
     
     console.log('取消響應:', response.data)
     
-    ElMessage.success('已取消媒合請求')
+    ElMessage.success('已取消交友請求')
     loadSentMatches()
     loadRecommendedMatches()  // 重新載入推薦列表
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('取消媒合失敗:', error)
+      console.error('取消交友失敗:', error)
       if (error.response?.data?.error) {
         ElMessage.error(error.response.data.error)
       } else {
-        ElMessage.error('取消媒合失敗')
+        ElMessage.error('取消交友失敗')
       }
     }
   }
@@ -654,6 +770,50 @@ const cancelMatch = async (matchId) => {
 // 前往聊天
 const goToChat = (userId) => {
   router.push(`/chat?userId=${userId}`)
+}
+
+// 打開社群連結
+const openSocialLink = (url) => {
+  if (url) {
+    const fullUrl = url.startsWith('http') ? url : `https://${url}`
+    window.open(fullUrl, '_blank')
+  }
+}
+
+// 顯示用戶 LINE QR Code
+const showUserLineQRCode = (user) => {
+  if (!user.social_links?.line) {
+    ElMessage.warning('該用戶未綁定 LINE')
+    return
+  }
+  
+  selectedLineUser.value = {
+    name: user.name,
+    lineId: user.social_links.line
+  }
+  showLineQRDialog.value = true
+  
+  setTimeout(() => {
+    generateMatchLineQRCode()
+  }, 100)
+}
+
+// 生成 LINE QR Code (for Matches page)
+const generateMatchLineQRCode = () => {
+  const container = document.getElementById('matchLineQRCode')
+  if (!container) return
+  
+  container.innerHTML = ''
+  
+  const lineUrl = `https://line.me/ti/p/${encodeURIComponent(selectedLineUser.value.lineId)}`
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(lineUrl)}`
+  
+  const img = document.createElement('img')
+  img.src = qrCodeUrl
+  img.alt = 'LINE QR Code'
+  img.style.maxWidth = '100%'
+  
+  container.appendChild(img)
 }
 </script>
 
@@ -723,6 +883,24 @@ const goToChat = (userId) => {
   gap: 5px;
   justify-content: center;
   margin-top: 10px;
+}
+
+.match-social-links {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ebeef5;
+}
+
+.match-social-links .el-button {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.match-social-links .el-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 .matched-card {

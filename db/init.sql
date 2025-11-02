@@ -15,6 +15,7 @@ CREATE TABLE `users` (
   `email` varchar(120) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
   `privacy_setting` varchar(20) DEFAULT NULL,
+  `social_privacy` varchar(20) DEFAULT 'public',
   `location` varchar(100) DEFAULT NULL,
   `profile_picture` varchar(255) DEFAULT NULL,
   `bio` text DEFAULT NULL,
@@ -25,6 +26,13 @@ CREATE TABLE `users` (
   `is_verified` tinyint(1) DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT NULL,
   `last_seen` datetime DEFAULT NULL,
+  `instagram_url` varchar(255) DEFAULT NULL,
+  `facebook_url` varchar(255) DEFAULT NULL,
+  `line_id` varchar(100) DEFAULT NULL,
+  `twitter_url` varchar(255) DEFAULT NULL,
+  `two_factor_enabled` tinyint(1) DEFAULT 0,
+  `two_factor_secret` varchar(32) DEFAULT NULL,
+  `rating_count` int(11) DEFAULT 0,
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `ix_users_email` (`email`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -34,6 +42,8 @@ CREATE TABLE `activities` (
   `activity_id` int(11) NOT NULL AUTO_INCREMENT,
   `title` varchar(200) NOT NULL,
   `date` date NOT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
   `location` varchar(200) NOT NULL,
   `description` text DEFAULT NULL,
   `category` varchar(50) DEFAULT NULL,
@@ -156,11 +166,3 @@ CREATE TABLE `expenses` (
   CONSTRAINT `expenses_ibfk_1` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`),
   CONSTRAINT `expenses_ibfk_2` FOREIGN KEY (`payer_id`) REFERENCES `users` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- Dumping data for table `users`
-LOCK TABLES `users` WRITE;
-INSERT INTO `users` VALUES
-(1,'test','test@test.com','pbkdf2:sha256:600000$fKDjdAsb4iJf4Fqt$470db787e1b6ef39aebaee5552e2713cc4ba09e0a646955c25fae5252319b8c8','public',NULL,NULL,'',NULL,NULL,NULL,'2025-10-22 01:57:11',0,1,'2025-10-22 01:57:57'),
-(2,'test1','test1@test1.com','pbkdf2:sha256:600000$HBcS0iXAXTXcwRPN$d4e915408aa3a7f764d5bba3a2ab2771df8bd55dd2ce779f11c8fe81a280a916','public',NULL,NULL,'',NULL,NULL,NULL,'2025-10-22 01:59:49',0,1,'2025-10-22 02:00:07'),
-(3,'test2','test2@test2.com','pbkdf2:sha256:600000$m5EkWqwPZBtrvXai$b5a97eb57179364a748ee0fac6ede5fd875b79b27d7abc70c24e393c5a9da88e','public',NULL,NULL,'',NULL,NULL,NULL,'2025-10-22 08:33:40',0,1,'2025-10-23 22:46:29');
-UNLOCK TABLES;

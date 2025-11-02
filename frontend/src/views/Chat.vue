@@ -38,7 +38,18 @@
                 </el-badge>
                 <div class="chat-item-content">
                   <div class="chat-item-header">
-                    <span class="chat-name">{{ chat.name }}</span>
+                    <div class="chat-name-line">
+                      <span class="chat-name">{{ chat.name }}</span>
+                      <el-tag
+                        v-if="!chat.matchId"
+                        size="small"
+                        type="warning"
+                        effect="plain"
+                        class="stranger-tag"
+                      >
+                        陌生
+                      </el-tag>
+                    </div>
                     <span class="chat-time">{{ chat.lastMessageTime }}</span>
                   </div>
                   <div class="chat-last-message">{{ chat.lastMessage }}</div>
@@ -77,6 +88,18 @@
               </div>
             </template>
             
+            <!-- 陌生訊息提示（非好友對話） -->
+            <el-alert
+              v-if="selectedChat && !selectedChat.matchId"
+              title="陌生訊息"
+              type="info"
+              :closable="false"
+              show-icon
+              style="margin-bottom: 10px;"
+            >
+              此對象尚未成為好友，該對話將歸類為陌生訊息。
+            </el-alert>
+
             <!-- 訊息列表 -->
             <el-scrollbar ref="messageScrollbar" height="calc(100vh - 400px)" class="message-list">
               <div
@@ -158,52 +181,6 @@
       </el-row>
     </div>
 
-    <!-- 用戶資料對話框 -->
-    <el-dialog
-      v-model="showUserProfileDialog"
-      title="用戶資料"
-      width="500px"
-    >
-      <el-descriptions v-if="selectedUserProfile" :column="1" border>
-        <el-descriptions-item label="用戶名">
-          {{ selectedUserProfile.username }}
-        </el-descriptions-item>
-        <el-descriptions-item label="Email">
-          {{ selectedUserProfile.email }}
-        </el-descriptions-item>
-        <el-descriptions-item label="性別">
-          {{ selectedUserProfile.gender === 'male' ? '男' : selectedUserProfile.gender === 'female' ? '女' : '其他' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="年齡">
-          {{ selectedUserProfile.age || '未設定' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="地點">
-          {{ selectedUserProfile.location || '未設定' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="興趣標籤">
-          <div v-if="selectedUserProfile.interests && selectedUserProfile.interests.length > 0" class="interest-tags">
-            <el-tag
-              v-for="interest in selectedUserProfile.interests"
-              :key="interest"
-              size="small"
-              type="info"
-              style="margin: 2px;"
-            >
-              {{ interest }}
-            </el-tag>
-          </div>
-          <span v-else class="text-secondary">未設定</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="簡介">
-          {{ selectedUserProfile.bio || '這個用戶還沒有填寫簡介' }}
-        </el-descriptions-item>
-      </el-descriptions>
-      
-      <template #footer>
-        <el-button @click="showUserProfileDialog = false">關閉</el-button>
-      </template>
-    </el-dialog>
-    
     <!-- 共同參與的活動對話框 -->
     <el-dialog
       v-model="showActivityDialog"
@@ -288,17 +265,26 @@ const loadConversations = async () => {
     const response = await axios.get('/chat/conversations')
     
     if (response.data && response.data.conversations) {
-      chats.value = response.data.conversations.map(conv => ({
-        id: conv.other_user.user_id,
-        matchId: conv.match_id,
-        activityId: conv.activity_id,
-        name: conv.other_user.name,
-        avatar: conv.other_user.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
-        lastMessage: conv.last_message?.content || '開始聊天吧',
-        lastMessageTime: conv.last_message ? formatTime(conv.last_message.created_at) : '',
-        unreadCount: conv.unread_count || 0,
-        online: conv.other_user.is_online || false
-      }))
+      chats.value = response.data.conversations.map(conv => {
+        console.log('📋 聊天對話:', {
+          userId: conv.other_user.user_id,
+          name: conv.other_user.name,
+          matchId: conv.match_id,
+          hasMatch: !!conv.match_id
+        })
+        
+        return {
+          id: conv.other_user.user_id,
+          matchId: conv.match_id,
+          activityId: conv.activity_id,
+          name: conv.other_user.name,
+          avatar: conv.other_user.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+          lastMessage: conv.last_message?.content || '開始聊天吧',
+          lastMessageTime: conv.last_message ? formatTime(conv.last_message.created_at) : '',
+          unreadCount: conv.unread_count || 0,
+          online: conv.other_user.is_online || false
+        }
+      })
     }
   } catch (error) {
     console.error('載入聊天列表失敗:', error)
@@ -343,6 +329,16 @@ const loadMessages = async (userId) => {
   }
 }
 
+// 標記與指定用戶的對話為已讀（用於沒有 matchId 的情況，例如尚未成為好友）
+const markMessagesAsRead = async (userId) => {
+  try {
+    await axios.put(`/chat/conversations/${userId}/read`)
+    // 無需額外處理，UI 端已在 selectChat 時將未讀數設為 0
+  } catch (error) {
+    console.error('REST 標記對話已讀失敗:', error)
+  }
+}
+
 // 格式化時間
 const formatTime = (dateString) => {
   const date = new Date(dateString)
@@ -373,7 +369,7 @@ const filteredChats = computed(() => {
 })
 
 // 選擇聊天
-const selectChat = (chat) => {
+const selectChat = async (chat) => {
   // 如果之前有選擇的聊天，先離開
   if (selectedChat.value && selectedChat.value.matchId) {
     const currentUser = JSON.parse(localStorage.getItem('user'))
@@ -387,13 +383,33 @@ const selectChat = (chat) => {
   // 載入訊息
   loadMessages(chat.id)
   
-  // 加入新的聊天室
-  if (chat.matchId && socketService.isConnected()) {
+  // 加入新的聊天室（使用 user_id 或 matchId）
+  if (socketService.isConnected()) {
     const currentUser = JSON.parse(localStorage.getItem('user'))
-    socketService.joinChat(chat.matchId, currentUser.user_id)
+    const roomId = chat.matchId || chat.id // 優先使用 matchId，否則使用 user_id
+    
+    console.log('🔵 準備加入聊天室:', {
+      roomId,
+      isMatch: !!chat.matchId,
+      userId: currentUser.user_id,
+      isConnected: socketService.isConnected()
+    })
+    
+    socketService.joinChat(roomId, currentUser.user_id)
     
     // 標記為已讀
-    socketService.markAsRead(chat.matchId, currentUser.user_id)
+    if (chat.matchId) {
+      socketService.markAsRead(chat.matchId, currentUser.user_id)
+    } else {
+      // 對於沒有 matchId 的對話（非好友），通過 REST API 標記已讀
+      try {
+        await markMessagesAsRead(chat.id)
+      } catch (error) {
+        console.error('標記訊息為已讀失敗:', error)
+      }
+    }
+  } else {
+    console.log('⚠️ Socket.IO 未連線')
   }
 }
 
@@ -412,16 +428,59 @@ const sendMessage = async () => {
   try {
     const currentUser = JSON.parse(localStorage.getItem('user'))
     
-    // 優先使用 Socket.IO 發送
-    if (socketService.isConnected() && selectedChat.value.matchId) {
-      await socketService.sendMessage(
-        selectedChat.value.matchId,
+    const roomId = selectedChat.value.matchId || selectedChat.value.id
+    
+    console.log('🔍 檢查發送條件:', {
+      isConnected: socketService.isConnected(),
+      matchId: selectedChat.value.matchId,
+      userId: selectedChat.value.id,
+      roomId,
+      chatObject: selectedChat.value
+    })
+    
+    // 優先使用 Socket.IO 發送（使用 roomId：matchId 或 userId）
+    if (socketService.isConnected()) {
+      console.log('🟢 使用 Socket.IO 發送訊息:', {
+        roomId,
+        isMatch: !!selectedChat.value.matchId,
+        content: messageInput.value
+      })
+      
+      const sent = await socketService.sendMessage(
+        roomId,
         currentUser.user_id,
         messageInput.value,
         'text'
       )
-      
-      // Socket.IO 會通過 new_message 事件回傳訊息，不需要手動添加
+
+      console.log('✅ 服務器回應:', sent)
+
+      // Server acknowledged and returned message data (sent)
+      // Optimistically add to local message list if not already present.
+      if (sent && sent.message_id) {
+        const exists = messages.value.some(m => m.id === sent.message_id)
+        if (!exists) {
+          console.log('📝 樂觀更新：添加訊息到本地列表')
+          messages.value.push({
+            id: sent.message_id,
+            type: sent.message_type || 'text',
+            content: sent.content || messageInput.value,
+            time: formatTime(sent.timestamp || new Date().toISOString()),
+            isMine: true
+          })
+          
+          // 滾動到底部
+          nextTick(() => {
+            if (messageScrollbar.value) {
+              messageScrollbar.value.setScrollTop(999999)
+            }
+          })
+        } else {
+          console.log('⚠️ 訊息已存在，跳過添加')
+        }
+      }
+
+      // 清空輸入框
       messageInput.value = ''
       
     } else {
@@ -473,10 +532,18 @@ onMounted(async () => {
   
   // 監聽新訊息
   socketService.onNewMessage((message) => {
-    console.log('收到即時訊息:', message)
-    
+    console.log('📨 收到即時訊息:', message)
+    console.log('當前聊天室:', selectedChat.value?.matchId, '訊息來自:', message.match_id)
+
+    // 防止重複推入相同 message_id
+    if (messages.value.some(m => m.id === message.message_id)) {
+      console.log('⚠️ 訊息已存在（去重）:', message.message_id)
+      return
+    }
+
     // 如果是當前聊天室的訊息，添加到訊息列表
     if (selectedChat.value && message.match_id === selectedChat.value.matchId) {
+      console.log('✅ 添加訊息到當前聊天室')
       const currentUserId = JSON.parse(localStorage.getItem('user')).user_id
       messages.value.push({
         id: message.message_id,
@@ -485,23 +552,35 @@ onMounted(async () => {
         time: formatTime(message.timestamp),
         isMine: message.sender_id === currentUserId
       })
-      
+
       // 滾動到底部
       nextTick(() => {
         if (messageScrollbar.value) {
           messageScrollbar.value.setScrollTop(999999)
         }
       })
+    } else {
+      console.log('ℹ️ 訊息不屬於當前聊天室，僅更新列表')
+    }
+
+    // 更新聊天列表中的最後訊息（使用 matchId 或通過 sender_id/receiver_id 查找）
+    let chatIndex = chats.value.findIndex(c => c.matchId === message.match_id)
+    
+    // 如果通過 matchId 找不到，嘗試通過 sender_id 查找（陌生訊息）
+    if (chatIndex === -1) {
+      const currentUserId = JSON.parse(localStorage.getItem('user')).user_id
+      const otherUserId = message.sender_id === currentUserId ? message.receiver_id : message.sender_id
+      chatIndex = chats.value.findIndex(c => c.id === otherUserId)
     }
     
-    // 更新聊天列表中的最後訊息
-    const chatIndex = chats.value.findIndex(c => c.matchId === message.match_id)
     if (chatIndex > -1) {
       chats.value[chatIndex].lastMessage = message.content
       chats.value[chatIndex].lastMessageTime = formatTime(message.timestamp)
-      
+
       // 如果不是當前聊天，增加未讀數
-      if (!selectedChat.value || selectedChat.value.matchId !== message.match_id) {
+      const currentRoomId = selectedChat.value?.matchId || selectedChat.value?.id
+      const messageRoomId = message.match_id || message.sender_id
+      if (!selectedChat.value || currentRoomId !== messageRoomId) {
         chats.value[chatIndex].unreadCount = (chats.value[chatIndex].unreadCount || 0) + 1
       }
     }
@@ -634,26 +713,15 @@ const handleImageSelect = async (event) => {
   ElMessage.info('圖片上傳功能需要後端支援，目前僅顯示檔名')
 }
 
-// 查看用戶資料
-const showUserProfileDialog = ref(false)
-const selectedUserProfile = ref(null)
-
-const viewUserProfile = async () => {
+// 查看用戶資料（導航到公開資料頁面）
+const viewUserProfile = () => {
   if (!selectedChat.value) {
     ElMessage.warning('請先選擇聊天對象')
     return
   }
 
-  try {
-    const response = await axios.get(`/users/${selectedChat.value.id}`)
-    if (response.data && response.data.user) {
-      selectedUserProfile.value = response.data.user
-      showUserProfileDialog.value = true
-    }
-  } catch (error) {
-    console.error('載入用戶資料失敗:', error)
-    ElMessage.error('無法載入用戶資料')
-  }
+  // 導航到公開用戶資料頁面
+  router.push(`/user/${selectedChat.value.id}`)
 }
 
 // 查看活動詳情
@@ -787,9 +855,19 @@ const getActivityStatusText = (status) => {
   margin-bottom: 5px;
 }
 
+.chat-name-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .chat-name {
   font-weight: bold;
   font-size: 15px;
+}
+
+.stranger-tag {
+  margin-left: 4px;
 }
 
 .chat-time {

@@ -4,12 +4,14 @@ import { createRouter, createWebHistory } from 'vue-router'
 const Home = () => import('@/views/Home.vue')
 const Login = () => import('@/views/Login.vue')
 const Register = () => import('@/views/Register.vue')
+const ForgotPassword = () => import('@/views/ForgotPassword.vue')
 const Dashboard = () => import('@/views/Dashboard.vue')
 const Activities = () => import('@/views/Activities.vue')
 const ActivityDetail = () => import('@/views/ActivityDetail.vue')
 const Matches = () => import('@/views/Matches.vue')
 const Chat = () => import('@/views/Chat.vue')
 const Profile = () => import('@/views/Profile.vue')
+const UserProfile = () => import('@/views/user/UserProfile.vue')
 
 const routes = [
   {
@@ -34,6 +36,14 @@ const routes = [
     component: Register,
     meta: {
       title: '註冊 - EdgeSurvivor'
+    }
+  },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: ForgotPassword,
+    meta: {
+      title: '忘記密碼 - EdgeSurvivor'
     }
   },
   {
@@ -68,7 +78,7 @@ const routes = [
     name: 'Matches',
     component: Matches,
     meta: {
-      title: '旅伴媒合 - EdgeSurvivor',
+      title: '旅伴交友 - EdgeSurvivor',
       requiresAuth: true
     }
   },
@@ -87,6 +97,15 @@ const routes = [
     component: Profile,
     meta: {
       title: '個人資料 - EdgeSurvivor',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/user/:id',
+    name: 'UserProfile',
+    component: UserProfile,
+    meta: {
+      title: '用戶資料 - EdgeSurvivor',
       requiresAuth: true
     }
   }

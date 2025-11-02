@@ -59,11 +59,65 @@
               </div>
               <div class="stat-item">
                 <div class="stat-value">{{ userProfile.stats.matches }}</div>
-                <div class="stat-label">媒合</div>
+                <div class="stat-label">好友</div>
               </div>
               <div class="stat-item">
                 <div class="stat-value">{{ userProfile.stats.reviews }}</div>
                 <div class="stat-label">評價</div>
+              </div>
+            </div>
+            
+            <!-- 社群帳號展示 -->
+            <el-divider content-position="center">
+              <span style="color: #909399; font-size: 14px;">社群帳號</span>
+            </el-divider>
+            <div class="social-links-display">
+              <el-button
+                v-if="socialLinks.instagram"
+                circle
+                size="large"
+                style="background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); color: white; border: none;"
+                @click="openSocialLink(socialLinks.instagram)"
+                title="Instagram"
+              >
+                <el-icon :size="20"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M7.8,2H16.2C19.4,2 22,4.6 22,7.8V16.2A5.8,5.8 0 0,1 16.2,22H7.8C4.6,22 2,19.4 2,16.2V7.8A5.8,5.8 0 0,1 7.8,2M7.6,4A3.6,3.6 0 0,0 4,7.6V16.4C4,18.39 5.61,20 7.6,20H16.4A3.6,3.6 0 0,0 20,16.4V7.6C20,5.61 18.39,4 16.4,4H7.6M17.25,5.5A1.25,1.25 0 0,1 18.5,6.75A1.25,1.25 0 0,1 17.25,8A1.25,1.25 0 0,1 16,6.75A1.25,1.25 0 0,1 17.25,5.5M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z" /></svg></el-icon>
+              </el-button>
+              
+              <el-button
+                v-if="socialLinks.facebook"
+                circle
+                size="large"
+                style="background: #1877F2; color: white; border: none;"
+                @click="openSocialLink(socialLinks.facebook)"
+                title="Facebook"
+              >
+                <el-icon :size="20"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.04C6.5 2.04 2 6.53 2 12.06C2 17.06 5.66 21.21 10.44 21.96V14.96H7.9V12.06H10.44V9.85C10.44 7.34 11.93 5.96 14.22 5.96C15.31 5.96 16.45 6.15 16.45 6.15V8.62H15.19C13.95 8.62 13.56 9.39 13.56 10.18V12.06H16.34L15.89 14.96H13.56V21.96A10 10 0 0 0 22 12.06C22 6.53 17.5 2.04 12 2.04Z" /></svg></el-icon>
+              </el-button>
+              
+              <el-button
+                v-if="socialLinks.line"
+                circle
+                size="large"
+                style="background: #00B900; color: white; border: none;"
+                @click="showLineQRCode"
+                title="LINE (點擊顯示 QR Code)"
+              >
+                <el-icon :size="20"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.365,9.863c.349,0,.698.025,1.041.083,0-5.094-5.098-9.233-11.381-9.233C3.75.713,0,4.853,0,9.948s3.75,9.235,8.988,9.235c1.031,0,2.025-.149,2.949-.43L19.373,24V18.048a6.644,6.644,0,0,0,2.065-4.784A6.618,6.618,0,0,0,19.365,9.863Z" /></svg></el-icon>
+              </el-button>
+              
+              <el-button
+                v-if="socialLinks.twitter"
+                circle
+                size="large"
+                style="background: #000000; color: white; border: none;"
+                @click="openSocialLink(socialLinks.twitter)"
+                title="Twitter (X)"
+              >
+                <el-icon :size="20"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M22.46,6C21.69,6.35 20.86,6.58 20,6.69C20.88,6.16 21.56,5.32 21.88,4.31C21.05,4.81 20.13,5.16 19.16,5.36C18.37,4.5 17.26,4 16,4C13.65,4 11.73,5.92 11.73,8.29C11.73,8.63 11.77,8.96 11.84,9.27C8.28,9.09 5.11,7.38 3,4.79C2.63,5.42 2.42,6.16 2.42,6.94C2.42,8.43 3.17,9.75 4.33,10.5C3.62,10.5 2.96,10.3 2.38,10C2.38,10 2.38,10 2.38,10.03C2.38,12.11 3.86,13.85 5.82,14.24C5.46,14.34 5.08,14.39 4.69,14.39C4.42,14.39 4.15,14.36 3.89,14.31C4.43,16 6,17.26 7.89,17.29C6.43,18.45 4.58,19.13 2.56,19.13C2.22,19.13 1.88,19.11 1.54,19.07C3.44,20.29 5.70,21 8.12,21C16,21 20.33,14.46 20.33,8.79C20.33,8.6 20.33,8.42 20.32,8.23C21.16,7.63 21.88,6.87 22.46,6Z" /></svg></el-icon>
+              </el-button>
+              
+              <div v-if="!socialLinks.instagram && !socialLinks.facebook && !socialLinks.line && !socialLinks.twitter" style="color: #909399; font-size: 14px; text-align: center; padding: 10px;">
+                未公開/未綁定社群帳號
               </div>
             </div>
           </el-card>
@@ -144,11 +198,131 @@
               </el-card>
             </el-tab-pane>
             
+            <!-- 社群帳號綁定 -->
+            <el-tab-pane label="社群帳號" name="social">
+              <el-card>
+                <!-- <div class="social-binding-header">
+                  <el-icon :size="24" color="#409eff"><Link /></el-icon>
+                  <div>
+                    <h3>綁定社群帳號</h3>
+                    <p>提升個人資料可信度，讓其他旅伴更容易認識您</p>
+                  </div>
+                </div> -->
+                
+                <el-form label-width="0px" class="social-form">
+                  <!-- Instagram -->
+                  <div class="social-input-group instagram-group">
+                    <div class="social-label">
+                      <div class="social-icon instagram-icon">
+                        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M7.8,2H16.2C19.4,2 22,4.6 22,7.8V16.2A5.8,5.8 0 0,1 16.2,22H7.8C4.6,22 2,19.4 2,16.2V7.8A5.8,5.8 0 0,1 7.8,2M7.6,4A3.6,3.6 0 0,0 4,7.6V16.4C4,18.39 5.61,20 7.6,20H16.4A3.6,3.6 0 0,0 20,16.4V7.6C20,5.61 18.39,4 16.4,4H7.6M17.25,5.5A1.25,1.25 0 0,1 18.5,6.75A1.25,1.25 0 0,1 17.25,8A1.25,1.25 0 0,1 16,6.75A1.25,1.25 0 0,1 17.25,5.5M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z"></path></svg>
+                      </div>
+                      <span>Instagram</span>
+                    </div>
+                    <el-input 
+                      v-model="socialLinks.instagram" 
+                      placeholder="https://instagram.com/your_username"
+                      size="large"
+                      clearable
+                    />
+                    <el-button 
+                      v-if="socialLinks.instagram"
+                      class="visit-btn"
+                      @click="openSocialLink(socialLinks.instagram)"
+                      circle
+                    >
+                      <el-icon><Right /></el-icon>
+                    </el-button>
+                  </div>
+                  
+                  <!-- Facebook -->
+                  <div class="social-input-group facebook-group">
+                    <div class="social-label">
+                      <div class="social-icon facebook-icon">
+                        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.04C6.5 2.04 2 6.53 2 12.06C2 17.06 5.66 21.21 10.44 21.96V14.96H7.9V12.06H10.44V9.85C10.44 7.34 11.93 5.96 14.22 5.96C15.31 5.96 16.45 6.15 16.45 6.15V8.62H15.19C13.95 8.62 13.56 9.39 13.56 10.18V12.06H16.34L15.89 14.96H13.56V21.96A10 10 0 0 0 22 12.06C22 6.53 17.5 2.04 12 2.04Z"></path></svg>
+                      </div>
+                      <span>Facebook</span>
+                    </div>
+                    <el-input 
+                      v-model="socialLinks.facebook" 
+                      placeholder="https://facebook.com/your_profile"
+                      size="large"
+                      clearable
+                    />
+                    <el-button 
+                      v-if="socialLinks.facebook"
+                      class="visit-btn"
+                      @click="openSocialLink(socialLinks.facebook)"
+                      circle
+                    >
+                      <el-icon><Right /></el-icon>
+                    </el-button>
+                  </div>
+                  
+                  <!-- LINE ID -->
+                  <div class="social-input-group line-group">
+                    <div class="social-label">
+                      <div class="social-icon line-icon">
+                        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.365,9.863c.349,0,.698.025,1.041.083,0-5.094-5.098-9.233-11.381-9.233C3.75.713,0,4.853,0,9.948s3.75,9.235,8.988,9.235c1.031,0,2.025-.149,2.949-.43L19.373,24V18.048a6.644,6.644,0,0,0,2.065-4.784A6.618,6.618,0,0,0,19.365,9.863Z"></path></svg>
+                      </div>
+                      <span>LINE</span>
+                    </div>
+                    <el-input 
+                      v-model="socialLinks.line" 
+                      placeholder="your_line_id"
+                      size="large"
+                      clearable
+                    />
+                    <el-button 
+                      v-if="socialLinks.line"
+                      class="visit-btn"
+                      @click="showLineQRCode"
+                      circle
+                    >
+                      <el-icon><Connection /></el-icon>
+                    </el-button>
+                    <div class="input-hint">
+                      <el-icon><InfoFilled /></el-icon>
+                      輸入您的 LINE ID，其他用戶可以掃描 QR Code 加您好友
+                    </div>
+                  </div>
+                  
+                  <!-- Twitter -->
+                  <div class="social-input-group twitter-group">
+                    <div class="social-label">
+                      <div class="social-icon twitter-icon">
+                        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M22.46,6C21.69,6.35 20.86,6.58 20,6.69C20.88,6.16 21.56,5.32 21.88,4.31C21.05,4.81 20.13,5.16 19.16,5.36C18.37,4.5 17.26,4 16,4C13.65,4 11.73,5.92 11.73,8.29C11.73,8.63 11.77,8.96 11.84,9.27C8.28,9.09 5.11,7.38 3,4.79C2.63,5.42 2.42,6.16 2.42,6.94C2.42,8.43 3.17,9.75 4.33,10.5C3.62,10.5 2.96,10.3 2.38,10C2.38,10 2.38,10 2.38,10.03C2.38,12.11 3.86,13.85 5.82,14.24C5.46,14.34 5.08,14.39 4.69,14.39C4.42,14.39 4.15,14.36 3.89,14.31C4.43,16 6,17.26 7.89,17.29C6.43,18.45 4.58,19.13 2.56,19.13C2.22,19.13 1.88,19.11 1.54,19.07C3.44,20.29 5.70,21 8.12,21C16,21 20.33,14.46 20.33,8.79C20.33,8.6 20.33,8.42 20.32,8.23C21.16,7.63 21.88,6.87 22.46,6Z"></path></svg>
+                      </div>
+                      <span>Twitter (X)</span>
+                    </div>
+                    <el-input 
+                      v-model="socialLinks.twitter" 
+                      placeholder="https://twitter.com/your_username"
+                      size="large"
+                      clearable
+                    />
+                    <el-button 
+                      v-if="socialLinks.twitter"
+                      class="visit-btn"
+                      @click="openSocialLink(socialLinks.twitter)"
+                      circle
+                    >
+                      <el-icon><Right /></el-icon>
+                    </el-button>
+                  </div>
+                  
+                  <div class="form-actions">
+                    <el-button type="primary" size="large" @click="saveSocialLinks">儲存變更</el-button>
+                    <el-button size="large" @click="cancelSocialEdit">取消</el-button>
+                  </div>
+                </el-form>
+              </el-card>
+            </el-tab-pane>
+            
             <!-- 隱私設定 -->
             <el-tab-pane label="隱私設定" name="privacy">
               <el-card>
                 <el-form label-width="150px">
-                  <el-form-item label="個人資料可見性">
+                  <!-- <el-form-item label="個人資料可見性">
                     <el-radio-group v-model="privacySettings.profileVisibility">
                       <el-radio label="public">公開</el-radio>
                       <el-radio label="partial">部分公開</el-radio>
@@ -156,7 +330,34 @@
                     </el-radio-group>
                   </el-form-item>
                   
-                  <el-form-item label="顯示年齡">
+                  <el-divider content-position="center">
+                    <span style="font-size: 14px; color: #606266;"></span>
+                  </el-divider> -->
+                  
+                  <el-form-item label="社群帳號可見性">
+                    <el-radio-group v-model="privacySettings.socialPrivacy">
+                      <el-radio label="public">
+                        <span>所有人可見</span>
+                        <!-- <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+                          所有用戶都可以看到你的社群帳號連結
+                        </div> -->
+                      </el-radio>
+                      <el-radio label="friends_only">
+                        <span>僅好友可見</span>
+                        <!-- <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+                          只有已成為好友的用戶可以看到你的社群帳號連結
+                        </div> -->
+                      </el-radio>
+                    </el-radio-group>
+                    <div style="margin-top: 10px; padding: 10px; background: #f4f4f5; border-radius: 4px; font-size: 13px; color: #606266;">
+                      <el-icon style="vertical-align: middle;"><InfoFilled /></el-icon>
+                      提示：此設定會影響你的 Instagram、Facebook、LINE 和 Twitter 帳號是否對他人顯示
+                    </div>
+                  </el-form-item>
+                  
+                  <el-divider />
+                  
+                  <!-- <el-form-item label="顯示年齡">
                     <el-switch v-model="privacySettings.showAge" />
                   </el-form-item>
                   
@@ -166,7 +367,7 @@
                   
                   <el-form-item label="允許陌生人訊息">
                     <el-switch v-model="privacySettings.allowStrangerMessages" />
-                  </el-form-item>
+                  </el-form-item> -->
                   
                   <el-form-item>
                     <el-button type="primary" @click="savePrivacySettings">儲存設定</el-button>
@@ -193,18 +394,22 @@
                   <el-divider />
                   
                   <el-form-item label="兩步驟驗證">
-                    <el-switch v-model="securitySettings.twoFactorAuth" />
+                    <el-switch 
+                      v-model="securitySettings.twoFactorAuth" 
+                      @change="handleTwoFactorChange"
+                      :disabled="twoFactorLoading"
+                    />
                     <div style="margin-top: 8px; color: #909399; font-size: 12px;">
-                      啟用後需要輸入驗證碼才能登入
+                      {{ securitySettings.twoFactorAuth ? '已啟用 - 登入時需要輸入驗證碼' : '未啟用 - 建議啟用以提高帳號安全性' }}
                     </div>
                   </el-form-item>
                   
                   <el-divider />
                   
-                  <el-form-item label="危險區域">
+                  <el-form-item label="刪除帳號">
                     <el-button type="danger" @click="deleteAccount">刪除帳號</el-button>
                     <div style="margin-top: 8px; color: #f56c6c; font-size: 12px;">
-                      刪除後將無法恢復
+                      <!-- 刪除後將無法恢復 -->
                     </div>
                   </el-form-item>
                 </el-form>
@@ -249,6 +454,96 @@
         <el-button type="primary" @click="confirmChangeEmail">確認更改</el-button>
       </template>
     </el-dialog>
+
+    <!-- LINE QR Code 對話框 -->
+    <el-dialog v-model="showLineQRDialog" title="LINE QR Code" width="400px" align-center>
+      <div style="text-align: center;">
+        <div id="lineQRCode" style="display: inline-block;"></div>
+        <p style="margin-top: 20px; color: #606266;">
+          掃描此 QR Code 加我為 LINE 好友
+        </p>
+        <p style="color: #909399; font-size: 14px;">
+          LINE ID: <strong>{{ socialLinks.line }}</strong>
+        </p>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="showLineQRDialog = false">關閉</el-button>
+      </template>
+    </el-dialog>
+
+  <!-- 啟用兩步驟驗證對話框 -->
+  <el-dialog v-model="showTwoFactorDialog" title="啟用兩步驟驗證" width="500px" :before-close="handleTwoFactorBeforeClose">
+      <div style="text-align: center;">
+        <el-steps :active="twoFactorStep" finish-status="success" style="margin-bottom: 20px;">
+          <el-step title="掃描 QR Code" />
+          <el-step title="輸入驗證碼" />
+        </el-steps>
+        
+        <div v-if="twoFactorStep === 0">
+          <p style="margin-bottom: 20px; color: #606266;">
+            請使用 Google Authenticator 或其他驗證 App 掃描此 QR Code
+          </p>
+          <div id="twoFactorQRCode" style="display: inline-block; margin-bottom: 20px;"></div>
+          <p style="color: #909399; font-size: 14px;">
+            或手動輸入密鑰：<br>
+            <el-input 
+              v-model="twoFactorSecret" 
+              readonly 
+              style="max-width: 300px; margin-top: 10px;"
+            >
+              <template #append>
+                <el-button @click="copySecret">複製</el-button>
+              </template>
+            </el-input>
+          </p>
+        </div>
+        
+        <div v-if="twoFactorStep === 1">
+          <p style="margin-bottom: 20px; color: #606266;">
+            <!-- 請輸入驗證 App 顯示的 6 位數驗證碼 -->
+          </p>
+          <el-input
+            v-model="twoFactorCode"
+            placeholder="請輸入驗證器顯示 6 位數驗證碼"
+            maxlength="60"
+            style="max-width: 500px; font-size: 12px; text-align: center;"
+            @keyup.enter="verifyTwoFactorCode"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="cancelTwoFactor">取消</el-button>
+        <el-button v-if="twoFactorStep === 0" type="primary" @click="twoFactorStep = 1">下一步</el-button>
+        <el-button v-if="twoFactorStep === 1" @click="twoFactorStep = 0">上一步</el-button>
+        <el-button v-if="twoFactorStep === 1" type="primary" @click="verifyTwoFactorCode">確認</el-button>
+      </template>
+    </el-dialog>
+
+  <!-- 停用兩步驟驗證對話框 -->
+  <el-dialog v-model="showDisableTwoFactorDialog" title="停用兩步驟驗證" width="450px" :before-close="handleDisableTwoFactorBeforeClose">
+      <el-alert
+        title="警告"
+        type="warning"
+        :closable="false"
+        style="margin-bottom: 20px;"
+      >
+        停用兩步驟驗證會降低您的帳號安全性
+      </el-alert>
+      <el-form label-width="100px">
+        <el-form-item label="驗證碼">
+          <el-input
+            v-model="disableTwoFactorCode"
+            placeholder="請輸入目前的 6 位數驗證碼"
+            maxlength="6"
+            @keyup.enter="confirmDisableTwoFactor"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showDisableTwoFactorDialog = false">取消</el-button>
+        <el-button type="danger" @click="confirmDisableTwoFactor">確認停用</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -258,7 +553,11 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Upload,
-  Select
+  Select,
+  InfoFilled,
+  Link,
+  Right,
+  Connection
 } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
@@ -479,6 +778,7 @@ const newInterest = ref('')
 // 隱私設定
 const privacySettings = reactive({
   profileVisibility: 'public',
+  socialPrivacy: 'public',  // public 或 friends_only
   showAge: true,
   showLocation: true,
   allowStrangerMessages: true
@@ -488,6 +788,33 @@ const privacySettings = reactive({
 const securitySettings = reactive({
   twoFactorAuth: false
 })
+
+// 兩步驟驗證相關
+const showTwoFactorDialog = ref(false)
+const showDisableTwoFactorDialog = ref(false)
+const twoFactorStep = ref(0)
+const twoFactorSecret = ref('')
+const twoFactorCode = ref('')
+const disableTwoFactorCode = ref('')
+const twoFactorLoading = ref(false)
+
+// 社群帳號
+const socialLinks = reactive({
+  instagram: '',
+  facebook: '',
+  line: '',
+  twitter: ''
+})
+
+// 保存原始社群帳號資料
+const originalSocialLinks = reactive({
+  instagram: '',
+  facebook: '',
+  line: '',
+  twitter: ''
+})
+
+const showLineQRDialog = ref(false)
 
 // 密碼變更
 const showPasswordDialog = ref(false)
@@ -518,7 +845,7 @@ onMounted(async () => {
         stats: {
           activities: 0,
           matches: 0,
-          reviews: 0
+          reviews: user.rating_count || 0
         }
       }
       
@@ -529,6 +856,33 @@ onMounted(async () => {
       editForm.location = userProfile.value.location
       editForm.bio = userProfile.value.bio
       editForm.interests = user.interests || []  // 載入興趣標籤
+      
+      // 載入社群帳號
+      if (user.social_links) {
+        socialLinks.instagram = user.social_links.instagram || ''
+        socialLinks.facebook = user.social_links.facebook || ''
+        socialLinks.line = user.social_links.line || ''
+        socialLinks.twitter = user.social_links.twitter || ''
+        
+        // 保存原始資料
+        originalSocialLinks.instagram = user.social_links.instagram || ''
+        originalSocialLinks.facebook = user.social_links.facebook || ''
+        originalSocialLinks.line = user.social_links.line || ''
+        originalSocialLinks.twitter = user.social_links.twitter || ''
+      }
+      
+      // 載入隱私設定
+      if (user.privacy_setting) {
+        privacySettings.profileVisibility = user.privacy_setting
+      }
+      if (user.social_privacy) {
+        privacySettings.socialPrivacy = user.social_privacy
+      }
+      
+      // 載入兩步驟驗證狀態
+      if (user.two_factor_enabled !== undefined) {
+        securitySettings.twoFactorAuth = user.two_factor_enabled
+      }
       
       // 解析地區並設置級聯選擇器
       parseLocationString(userProfile.value.location)
@@ -730,14 +1084,98 @@ const cancelEdit = () => {
   editForm.interests = userProfile.value.interests || []  // 恢復興趣標籤
 }
 
+// 儲存社群帳號
+const saveSocialLinks = async () => {
+  try {
+    const response = await axios.put('/users/profile', {
+      social_links: {
+        instagram: socialLinks.instagram,
+        facebook: socialLinks.facebook,
+        line: socialLinks.line,
+        twitter: socialLinks.twitter
+      }
+    })
+    
+    if (response.data) {
+      ElMessage.success('社群帳號已更新')
+      // 更新原始資料
+      originalSocialLinks.instagram = socialLinks.instagram
+      originalSocialLinks.facebook = socialLinks.facebook
+      originalSocialLinks.line = socialLinks.line
+      originalSocialLinks.twitter = socialLinks.twitter
+    }
+  } catch (error) {
+    console.error('更新社群帳號失敗:', error)
+    ElMessage.error('更新失敗，請稍後再試')
+  }
+}
+
+// 取消社群帳號編輯
+const cancelSocialEdit = () => {
+  socialLinks.instagram = originalSocialLinks.instagram
+  socialLinks.facebook = originalSocialLinks.facebook
+  socialLinks.line = originalSocialLinks.line
+  socialLinks.twitter = originalSocialLinks.twitter
+}
+
+// 打開社群連結
+const openSocialLink = (url) => {
+  if (url) {
+    // 確保 URL 包含 http:// 或 https://
+    const fullUrl = url.startsWith('http') ? url : `https://${url}`
+    window.open(fullUrl, '_blank')
+  }
+}
+
+// 顯示 LINE QR Code
+const showLineQRCode = () => {
+  if (!socialLinks.line) {
+    ElMessage.warning('請先輸入 LINE ID')
+    return
+  }
+  
+  showLineQRDialog.value = true
+  
+  // 等待對話框渲染後生成 QR Code
+  setTimeout(() => {
+    generateLineQRCode()
+  }, 100)
+}
+
+// 生成 LINE QR Code
+const generateLineQRCode = () => {
+  const container = document.getElementById('lineQRCode')
+  if (!container) return
+  
+  // 清空容器
+  container.innerHTML = ''
+  
+  // 使用 LINE 官方的 QR Code URL
+  const lineUrl = `https://line.me/ti/p/${encodeURIComponent(socialLinks.line)}`
+  
+  // 使用第三方 QR Code 生成服務
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(lineUrl)}`
+  
+  const img = document.createElement('img')
+  img.src = qrCodeUrl
+  img.alt = 'LINE QR Code'
+  img.style.maxWidth = '100%'
+  
+  container.appendChild(img)
+}
+
 // 儲存隱私設定
 const savePrivacySettings = async () => {
   try {
-    await axios.put('/users/privacy', {
-      privacy_setting: privacySettings.profileVisibility
+    const response = await axios.put('/users/privacy', {
+      privacy_setting: privacySettings.profileVisibility,
+      social_privacy: privacySettings.socialPrivacy
     })
     
-    ElMessage.success('隱私設定已更新')
+    if (response.data) {
+      ElMessage.success('隱私設定已更新')
+      console.log('已更新隱私設定:', response.data)
+    }
   } catch (error) {
     console.error('更新隱私設定失敗:', error)
     ElMessage.error('更新失敗，請稍後再試')
@@ -792,7 +1230,7 @@ const changePassword = async () => {
   
   try {
     await axios.post('/auth/change-password', {
-      current_password: passwordForm.currentPassword,
+      old_password: passwordForm.currentPassword,
       new_password: passwordForm.newPassword
     })
     
@@ -821,6 +1259,159 @@ const changePassword = async () => {
   }
 }
 
+// 處理兩步驟驗證開關變化
+const handleTwoFactorChange = async (value) => {
+  if (value) {
+    // 啟用兩步驟驗證
+    try {
+      twoFactorLoading.value = true
+      const response = await axios.post('/auth/2fa/setup')
+      
+      if (response.data && response.data.secret) {
+        twoFactorSecret.value = response.data.secret
+        showTwoFactorDialog.value = true
+        twoFactorStep.value = 0
+        twoFactorCode.value = ''
+        
+        // 等待對話框渲染後生成 QR Code
+        setTimeout(() => {
+          generateTwoFactorQRCode()
+        }, 100)
+      }
+    } catch (error) {
+      console.error('設定兩步驟驗證失敗:', error, error.response?.data)
+      // 顯示後端返回的錯誤訊息（如果有），否則使用通用提示
+      const msg = error.response?.data?.error || error.response?.data?.message || '設定失敗，請稍後再試'
+      ElMessage.error(msg)
+      securitySettings.twoFactorAuth = false
+    } finally {
+      twoFactorLoading.value = false
+    }
+  } else {
+    // 停用兩步驟驗證
+    disableTwoFactorCode.value = ''
+    showDisableTwoFactorDialog.value = true
+  }
+}
+
+// 生成兩步驟驗證 QR Code
+const generateTwoFactorQRCode = () => {
+  const container = document.getElementById('twoFactorQRCode')
+  if (!container) return
+  
+  container.innerHTML = ''
+  
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const email = user.email || userProfile.value.email
+  const appName = 'EdgeSurvivor'
+  
+  // 生成 TOTP URI
+  const totpUri = `otpauth://totp/${encodeURIComponent(appName)}:${encodeURIComponent(email)}?secret=${twoFactorSecret.value}&issuer=${encodeURIComponent(appName)}`
+  
+  // 使用第三方 QR Code 生成服務
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(totpUri)}`
+  
+  const img = document.createElement('img')
+  img.src = qrCodeUrl
+  img.alt = '兩步驟驗證 QR Code'
+  img.style.maxWidth = '100%'
+  
+  container.appendChild(img)
+}
+
+// 複製密鑰
+const copySecret = () => {
+  navigator.clipboard.writeText(twoFactorSecret.value)
+    .then(() => {
+      ElMessage.success('密鑰已複製到剪貼簿')
+    })
+    .catch(() => {
+      ElMessage.error('複製失敗')
+    })
+}
+
+// 驗證兩步驟驗證碼
+const verifyTwoFactorCode = async () => {
+  if (!twoFactorCode.value || twoFactorCode.value.length !== 6) {
+    ElMessage.error('請輸入 6 位數驗證碼')
+    return
+  }
+  
+  try {
+    const response = await axios.post('/auth/2fa/verify', {
+      code: twoFactorCode.value
+    })
+    
+    if (response.data && response.data.success) {
+      ElMessage.success('兩步驟驗證已啟用')
+      showTwoFactorDialog.value = false
+      securitySettings.twoFactorAuth = true
+    } else {
+      ElMessage.error('驗證碼錯誤，請重試')
+    }
+  } catch (error) {
+    console.error('驗證失敗:', error)
+    if (error.response?.data?.error) {
+      ElMessage.error(error.response.data.error)
+    } else {
+      ElMessage.error('驗證失敗，請重試')
+    }
+  }
+}
+
+// 取消兩步驟驗證設定
+const cancelTwoFactor = () => {
+  showTwoFactorDialog.value = false
+  securitySettings.twoFactorAuth = false
+}
+
+// Dialog before-close handlers: called when user clicks the dialog X or backdrop.
+// Ensure toggle state and temporary data are reverted if user dismisses dialogs.
+const handleTwoFactorBeforeClose = (done) => {
+  // User dismissed enable flow without verifying -> revert the switch and clear temp data
+  securitySettings.twoFactorAuth = false
+  twoFactorSecret.value = ''
+  twoFactorCode.value = ''
+  twoFactorStep.value = 0
+  done()
+}
+
+const handleDisableTwoFactorBeforeClose = (done) => {
+  // User dismissed disable flow -> keep 2FA enabled and clear input
+  securitySettings.twoFactorAuth = true
+  disableTwoFactorCode.value = ''
+  done()
+}
+
+// 確認停用兩步驟驗證
+const confirmDisableTwoFactor = async () => {
+  if (!disableTwoFactorCode.value || disableTwoFactorCode.value.length !== 6) {
+    ElMessage.error('請輸入 6 位數驗證碼')
+    return
+  }
+  
+  try {
+    const response = await axios.post('/auth/2fa/disable', {
+      code: disableTwoFactorCode.value
+    })
+    
+    if (response.data && response.data.success) {
+      ElMessage.success('兩步驟驗證已停用')
+      showDisableTwoFactorDialog.value = false
+      securitySettings.twoFactorAuth = false
+    } else {
+      ElMessage.error('驗證碼錯誤，請重試')
+    }
+  } catch (error) {
+    console.error('停用失敗:', error)
+    if (error.response?.data?.error) {
+      ElMessage.error(error.response.data.error)
+    } else {
+      ElMessage.error('停用失敗，請重試')
+    }
+  }
+}
+
 // 刪除帳號
 const deleteAccount = async () => {
   try {
@@ -836,7 +1427,7 @@ const deleteAccount = async () => {
     )
 
     // 二次確認
-    await ElMessageBox.prompt(
+    const result = await ElMessageBox.prompt(
       '請輸入您的密碼以確認刪除帳號',
       '確認密碼',
       {
@@ -853,16 +1444,19 @@ const deleteAccount = async () => {
       }
     )
 
-    // TODO: 需要後端API支援
-    ElMessage.info('帳號刪除功能需要後端API支援（DELETE /users/account）')
+    // 執行刪除
+    await axios.delete('/users/account', {
+      data: { password: result.value }
+    })
     
-    // 實際實作時應該這樣：
-    // await axios.delete('/users/account', {
-    //   data: { password: result.value }
-    // })
-    // localStorage.removeItem('token')
-    // router.push('/login')
-    // ElMessage.success('帳號已刪除')
+    ElMessage.success('帳號已刪除')
+    
+    // 清除本地資料並跳轉
+    setTimeout(() => {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      router.push('/login')
+    }, 1000)
     
   } catch (error) {
     if (error === 'cancel') {
@@ -870,6 +1464,11 @@ const deleteAccount = async () => {
       return
     }
     console.error('刪除帳號失敗:', error)
+    if (error.response?.data?.error) {
+      ElMessage.error(error.response.data.error)
+    } else {
+      ElMessage.error('刪除帳號失敗')
+    }
   }
 }
 </script>
@@ -938,9 +1537,193 @@ const deleteAccount = async () => {
   margin-top: 5px;
 }
 
+.social-links-display {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  padding: 15px 0;
+  flex-wrap: wrap;
+}
+
+.social-links-display .el-button {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.social-links-display .el-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* 社群帳號綁定樣式 */
+.social-binding-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  margin: -20px -20px 24px -20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4px 4px 0 0;
+  color: white;
+}
+
+.social-binding-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  margin: -20px -20px 24px -20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px 8px 0 0;
+  color: white;
+}
+
+.social-binding-header h3 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.social-binding-header p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.social-form {
+  padding: 0 4px;
+}
+
+.social-input-group {
+  position: relative;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.social-input-group:hover {
+  background: #ffffff;
+  border-color: #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.social-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.social-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+}
+
+.social-input-group:hover .social-icon {
+  transform: scale(1.1);
+}
+
+.instagram-icon {
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+}
+
+.facebook-icon {
+  background: #1877F2;
+}
+
+.line-icon {
+  background: #00B900;
+}
+
+.twitter-icon {
+  background: #000000;
+}
+
+.social-icon svg {
+  width: 20px;
+  height: 20px;
+  color: white;
+}
+
+.social-label span {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.social-input-group .el-input {
+  flex: 1;
+}
+
+.visit-btn {
+  position: absolute;
+  right: 20px;
+  top: 68px;
+  background: #409eff;
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.visit-btn:hover {
+  background: #337ecc;
+  transform: scale(1.1);
+}
+
+.input-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #e8f4fd;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.input-hint .el-icon {
+  color: #409eff;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e4e7ed;
+}
+
+.form-actions .el-button {
+  min-width: 120px;
+}
+
 @media (max-width: 768px) {
   .profile-container {
     padding: 10px;
+  }
+  
+  .social-binding-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .social-input-group {
+    padding: 16px;
+  }
+  
+  .visit-btn {
+    position: static;
+    margin-top: 12px;
+    width: 100%;
   }
 }
 </style>

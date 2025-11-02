@@ -52,6 +52,7 @@ def create_app(config_name=None):
     from blueprints.discussions import discussions_bp
     from blueprints.expenses import expenses_bp
     from blueprints.upload import upload_bp
+    from blueprints.reviews import reviews_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(users_bp, url_prefix='/api/users')
@@ -61,6 +62,7 @@ def create_app(config_name=None):
     app.register_blueprint(discussions_bp, url_prefix='/api')
     app.register_blueprint(expenses_bp, url_prefix='/api')
     app.register_blueprint(upload_bp, url_prefix='/api/upload')
+    app.register_blueprint(reviews_bp, url_prefix='/api')
     
     # 匯入模型（確保資料表被建立）
     from models.user import User

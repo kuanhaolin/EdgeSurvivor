@@ -7,7 +7,9 @@ class Activity(db.Model):
     
     activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(200), nullable=False)
-    date = db.Column(db.Date, nullable=False)
+    date = db.Column(db.Date, nullable=False)  # 保留舊欄位以向後兼容，作為開始日期
+    start_date = db.Column(db.Date)  # 活動開始日期
+    end_date = db.Column(db.Date)  # 活動結束日期
     location = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     category = db.Column(db.String(50))  # adventure, culture, leisure, food, sports, etc.
@@ -42,6 +44,8 @@ class Activity(db.Model):
             'activity_id': self.activity_id,
             'title': self.title,
             'date': self.date.isoformat() if self.date else None,
+            'start_date': self.start_date.isoformat() if self.start_date else (self.date.isoformat() if self.date else None),
+            'end_date': self.end_date.isoformat() if self.end_date else None,
             'location': self.location,
             'description': self.description,
             'category': self.category,

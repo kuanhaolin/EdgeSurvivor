@@ -14,3 +14,5 @@ marshmallow-sqlalchemy==0.29.0
 Werkzeug==2.3.7
 eventlet==0.33.3
 redis==5.0.1
+requests==2.31.0
+pyotp==2.9.0

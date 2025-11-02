@@ -248,22 +248,46 @@ def create_match():
             if not activity:
                 return jsonify({'error': '找不到活動'}), 404
         
-        # 檢查是否已存在媒合請求
-        query = Match.query.filter(
+        # 檢查是否已存在媒合請求（雙向檢查）
+        # 檢查 A -> B 方向
+        existing_match_ab = Match.query.filter(
             Match.user_a == current_user_id,
             Match.user_b == target_user_id
         )
         
+        # 檢查 B -> A 方向（對方發給我的）
+        existing_match_ba = Match.query.filter(
+            Match.user_a == target_user_id,
+            Match.user_b == current_user_id
+        )
+        
         if activity_id:
-            query = query.filter(Match.activity_id == activity_id)
+            existing_match_ab = existing_match_ab.filter(Match.activity_id == activity_id)
+            existing_match_ba = existing_match_ba.filter(Match.activity_id == activity_id)
         else:
-            query = query.filter(Match.activity_id.is_(None))
+            existing_match_ab = existing_match_ab.filter(Match.activity_id.is_(None))
+            existing_match_ba = existing_match_ba.filter(Match.activity_id.is_(None))
         
-        existing_match = query.first()
+        match_ab = existing_match_ab.first()
+        match_ba = existing_match_ba.first()
         
-        if existing_match and existing_match.status == 'pending':
-            print(f"[DEBUG] 已存在待處理的媒合請求: {existing_match.match_id}")
-            return jsonify({'error': '已發送過媒合請求'}), 400
+        # 檢查是否已經發送過請求（任何狀態）
+        if match_ab:
+            if match_ab.status == 'pending':
+                print(f"[DEBUG] 已存在待處理的媒合請求: {match_ab.match_id}")
+                return jsonify({'error': '已發送過交友請求，請等待對方回應'}), 400
+            elif match_ab.status in ['accepted', 'confirmed']:
+                print(f"[DEBUG] 已經是好友: {match_ab.match_id}")
+                return jsonify({'error': '你們已經是好友了'}), 400
+        
+        # 檢查對方是否已經發送過請求給我
+        if match_ba:
+            if match_ba.status == 'pending':
+                print(f"[DEBUG] 對方已發送交友請求: {match_ba.match_id}")
+                return jsonify({'error': '對方已向你發送交友請求，請到「待處理」頁面查看'}), 400
+            elif match_ba.status in ['accepted', 'confirmed']:
+                print(f"[DEBUG] 已經是好友: {match_ba.match_id}")
+                return jsonify({'error': '你們已經是好友了'}), 400
         
         # 創建媒合請求
         match = Match(
@@ -344,7 +368,10 @@ def reject_match(match_id):
 @matches_bp.route('/<int:match_id>', methods=['DELETE'])
 @jwt_required()
 def cancel_match(match_id):
-    """取消/刪除媒合請求（只有發送者可以取消 pending 狀態的請求）"""
+    """取消/刪除媒合請求
+    - pending 狀態：只有發送者可以取消
+    - accepted 狀態：雙方都可以刪除好友關係
+    """
     try:
         current_user_id = int(get_jwt_identity())
         match = Match.query.get(match_id)
@@ -352,22 +379,28 @@ def cancel_match(match_id):
         if not match:
             return jsonify({'error': '找不到媒合請求'}), 404
         
-        # 只有發送者可以取消
-        if match.user_a != current_user_id:
-            return jsonify({'error': '只有發送者可以取消媒合請求'}), 403
-        
-        # 只能取消 pending 狀態的請求
-        if match.status != 'pending':
-            return jsonify({'error': f'無法取消 {match.status} 狀態的媒合請求'}), 400
+        # 檢查權限
+        if match.status == 'pending':
+            # pending 狀態：只有發送者可以取消
+            if match.user_a != current_user_id:
+                return jsonify({'error': '只有發送者可以取消待審核的媒合請求'}), 403
+        elif match.status == 'accepted':
+            # accepted 狀態：雙方都可以刪除好友關係
+            if match.user_a != current_user_id and match.user_b != current_user_id:
+                return jsonify({'error': '無權刪除此好友關係'}), 403
+        else:
+            # rejected 等其他狀態不允許刪除
+            return jsonify({'error': f'無法刪除 {match.status} 狀態的媒合請求'}), 400
         
         db.session.delete(match)
         db.session.commit()
         
-        print(f"[DEBUG] 媒合請求 {match_id} 已被取消")
+        action = '已取消媒合請求' if match.status == 'pending' else '已刪除好友關係'
+        print(f"[DEBUG] 媒合請求 {match_id} ({match.status}) 已被用戶 {current_user_id} 刪除")
         
-        return jsonify({'message': '已取消媒合請求'}), 200
+        return jsonify({'message': action}), 200
         
     except Exception as e:
         db.session.rollback()
-        print(f"[ERROR] 取消媒合請求失敗: {e}")
+        print(f"[ERROR] 取消/刪除媒合請求失敗: {e}")
         return jsonify({'error': str(e)}), 500

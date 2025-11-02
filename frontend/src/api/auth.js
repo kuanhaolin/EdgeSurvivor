@@ -29,6 +29,21 @@ const authAPI = {
   // 修改密碼
   changePassword(passwords) {
     return api.post('/auth/change-password', passwords)
+  },
+
+  // Google 登入
+  googleLogin(token) {
+    return api.post('/auth/google-login', { token })
+  },
+
+  // 發送重設密碼驗證碼
+  sendResetCode(email) {
+    return api.post('/auth/forgot-password', { email })
+  },
+
+  // 重設密碼
+  resetPassword(data) {
+    return api.post('/auth/reset-password', data)
   }
 }
 

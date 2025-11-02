@@ -27,8 +27,8 @@ class ChatMessage(db.Model):
             'sender_id': self.sender_id,
             'receiver_id': self.receiver_id,
             'content': self.content,
-            'created_at': self.timestamp.isoformat() if self.timestamp else None,  # 使用 created_at 別名
-            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
+            'created_at': self.timestamp.isoformat() + 'Z' if self.timestamp else None,  # 添加 Z 表示 UTC
+            'timestamp': self.timestamp.isoformat() + 'Z' if self.timestamp else None,  # 添加 Z 表示 UTC
             'message_type': self.message_type,
             'status': self.status,
             'is_read': self.is_read,

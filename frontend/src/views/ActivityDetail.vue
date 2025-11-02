@@ -56,7 +56,7 @@
                 {{ activity.location }}
               </el-descriptions-item>
               <el-descriptions-item label="日期">
-                {{ formatDate(activity.date) }}
+                {{ formatDateRange(activity) }}
               </el-descriptions-item>
               <el-descriptions-item label="參與人數">
                 {{ activity.current_participants }} / {{ activity.max_participants }} 人
@@ -65,15 +65,23 @@
                 {{ activity.creator?.name }}
               </el-descriptions-item>
               <el-descriptions-item label="活動說明" :span="2">
-                {{ activity.description || '無說明' }}
+                <div class="activity-description-full">
+                  {{ activity.description || '無說明' }}
+                </div>
               </el-descriptions-item>
             </el-descriptions>
             
-            <!-- 編輯按鈕（僅創建者） -->
-            <div v-if="isCreator" style="margin-top: 20px;">
-              <el-button type="primary" @click="editActivity">
+            <!-- 動作按鈕區 -->
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+              <!-- 編輯按鈕（僅創建者） -->
+              <el-button v-if="isCreator" type="primary" @click="editActivity">
                 <el-icon><Edit /></el-icon>
                 編輯活動
+              </el-button>
+              <!-- 傳訊息給創建者（非創建者顯示） -->
+              <el-button v-else type="success" @click="messageCreator">
+                <el-icon><ChatDotRound /></el-icon>
+                傳訊息給創建者
               </el-button>
             </div>
           </el-card>
@@ -123,17 +131,34 @@
         
         <!-- 討論區 -->
         <el-tab-pane label="討論區" name="discussion">
-          <ActivityDiscussion
-            :activity-id="activityId"
-            :creator-id="activity.creator_id"
-          />
+          <template v-if="isCreator || isParticipant">
+            <ActivityDiscussion
+              :activity-id="activityId"
+              :creator-id="activity.creator_id"
+            />
+          </template>
+          <el-empty v-else description="只有活動參與者才能查看討論">
+            <template #default>
+              <div style="text-align:center; color:#909399;">申請加入或由創建者批准後即可查看</div>
+            </template>
+          </el-empty>
         </el-tab-pane>
         
         <!-- 費用分攤 -->
         <el-tab-pane label="費用分攤" name="expenses">
-          <ExpenseManager
+          <template v-if="isCreator || isParticipant">
+            <ExpenseManager
+              :activity-id="activityId"
+              :creator-id="activity.creator_id"
+            />
+          </template>
+          <el-empty v-else description="只有活動參與者才能查看費用與結算" />
+        </el-tab-pane>
+        
+        <!-- 互評 -->
+        <el-tab-pane label="互評" name="reviews">
+          <ActivityReviews
             :activity-id="activityId"
-            :creator-id="activity.creator_id"
           />
         </el-tab-pane>
         
@@ -223,8 +248,11 @@
         
         <el-form-item label="活動日期" required>
           <el-date-picker
-            v-model="editForm.date"
-            type="date"
+            v-model="editForm.dateRange"
+            type="daterange"
+            range-separator="到"
+            start-placeholder="開始日期"
+            end-placeholder="結束日期"
             style="width: 100%"
           />
         </el-form-item>
@@ -254,11 +282,12 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Edit, Plus, ArrowDown } from '@element-plus/icons-vue'
+import { Edit, Plus, ArrowDown, ChatDotRound } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import ActivityDiscussion from '@/components/ActivityDiscussion.vue'
 import ExpenseManager from '@/components/ExpenseManager.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
+import ActivityReviews from '@/components/ActivityReviews.vue'
 import axios from '@/utils/axios'
 
 const route = useRoute()
@@ -282,10 +311,8 @@ const isCreator = computed(() => {
 })
 
 const isParticipant = computed(() => {
-  return participants.value.some(p =>
-    p.user_id === currentUserId.value &&
-    ['approved', 'joined'].includes(p.status)
-  )
+  // 後端只返回已加入/已批准的參與者清單，因此只需比對 user_id
+  return participants.value.some(p => p.user_id === currentUserId.value)
 })
 
 // 創建人或參與者可以上傳照片
@@ -306,10 +333,19 @@ const editForm = reactive({
   title: '',
   category: '',
   location: '',
-  date: '',
+  dateRange: [],
   max_participants: 5,
   description: ''
 })
+
+// 傳訊息給創建者
+const messageCreator = () => {
+  if (!activity.value?.creator_id) return
+  router.push({
+    path: '/chat',
+    query: { userId: activity.value.creator_id }
+  })
+}
 
 // 載入活動詳情
 const loadActivity = async () => {
@@ -330,7 +366,19 @@ const editActivity = () => {
   editForm.title = activity.value.title
   editForm.category = activity.value.category
   editForm.location = activity.value.location
-  editForm.date = activity.value.date
+  
+  // 處理日期範圍
+  const startDate = activity.value.start_date || activity.value.date
+  const endDate = activity.value.end_date
+  if (startDate && endDate) {
+    editForm.dateRange = [new Date(startDate), new Date(endDate)]
+  } else if (startDate) {
+    const date = new Date(startDate)
+    editForm.dateRange = [date, date]
+  } else {
+    editForm.dateRange = []
+  }
+  
   editForm.max_participants = activity.value.max_participants
   editForm.description = activity.value.description || ''
   showEditDialog.value = true
@@ -338,13 +386,21 @@ const editActivity = () => {
 
 // 更新活動
 const updateActivity = async () => {
+  if (!editForm.dateRange || editForm.dateRange.length !== 2) {
+    ElMessage.error('請選擇活動日期')
+    return
+  }
+  
   try {
+    const [startDate, endDate] = editForm.dateRange
+    
     await axios.put(`/activities/${activityId.value}`, {
       cover_image: editForm.cover_image,
       title: editForm.title,
       type: editForm.category,
       location: editForm.location,
-      start_date: editForm.date,
+      start_date: startDate.toISOString().split('T')[0],
+      end_date: endDate.toISOString().split('T')[0],
       max_members: editForm.max_participants,
       description: editForm.description
     })
@@ -389,6 +445,27 @@ const addToAlbum = async () => {
 const formatDate = (dateString) => {
   if (!dateString) return '待定'
   return new Date(dateString).toLocaleDateString('zh-TW')
+}
+
+// 格式化日期範圍
+const formatDateRange = (activity) => {
+  const startDate = activity.start_date || activity.date
+  const endDate = activity.end_date
+  
+  if (!startDate) return '待定'
+  
+  if (startDate && endDate) {
+    const start = new Date(startDate).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
+    const end = new Date(endDate).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
+    
+    if (start === end) {
+      return start
+    } else {
+      return `${start} - ${end}`
+    }
+  }
+  
+  return new Date(startDate).toLocaleDateString('zh-TW')
 }
 
 // 狀態相關
@@ -536,6 +613,15 @@ onMounted(() => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+}
+
+/* 活動說明：保留換行並自動換行 */
+.activity-description-full {
+  white-space: pre-wrap; /* 保留使用者輸入的換行 */
+  word-break: break-word; /* 長字或 URL 可以安全換行 */
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  color: #606266;
 }
 
 @media (max-width: 768px) {

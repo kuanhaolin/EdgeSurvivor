@@ -29,8 +29,8 @@ class ActivityDiscussion(db.Model):
             'user_id': self.user_id,
             'message': self.message,
             'message_type': self.message_type,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'created_at': self.created_at.isoformat() + 'Z' if self.created_at else None,  # 添加 Z 表示 UTC
+            'updated_at': self.updated_at.isoformat() + 'Z' if self.updated_at else None
         }
         
         if include_user_info and self.user:

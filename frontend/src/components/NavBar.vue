@@ -15,7 +15,7 @@
       >
         <el-menu-item index="/dashboard">控制台</el-menu-item>
         <el-menu-item index="/activities">活動</el-menu-item>
-        <el-menu-item index="/matches">媒合</el-menu-item>
+        <el-menu-item index="/matches">交友</el-menu-item>
         <el-menu-item index="/chat">
           聊天
           <el-badge 

@@ -65,14 +65,19 @@ def create_activity():
                 return jsonify({'error': f'{field} is required'}), 400
         
         # 解析日期
-        activity_date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00')).date()
+        start_date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00')).date()
+        end_date = None
+        if data.get('end_date'):
+            end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00')).date()
         
         activity = Activity(
             creator_id=current_user_id,
             title=data['title'],
             category=data['type'],  # 前端傳 type，後端存為 category
             location=data['location'],
-            date=activity_date,  # 前端傳 start_date，後端存為 date
+            date=start_date,  # 保留舊欄位以向後兼容
+            start_date=start_date,  # 新增開始日期
+            end_date=end_date,  # 新增結束日期
             max_participants=data['max_members'],  # 前端傳 max_members，後端存為 max_participants
             description=data.get('description', ''),
             status=data.get('status', 'open')  # 默認為 open（開放報名）
@@ -162,7 +167,11 @@ def update_activity(activity_id):
         if 'location' in data:
             activity.location = data['location']
         if 'start_date' in data:
-            activity.date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00')).date()
+            start_date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00')).date()
+            activity.date = start_date  # 保留舊欄位
+            activity.start_date = start_date
+        if 'end_date' in data:
+            activity.end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00')).date()
         if 'max_members' in data:
             activity.max_participants = data['max_members']  # 前端傳 max_members，後端存為 max_participants
         if 'description' in data:

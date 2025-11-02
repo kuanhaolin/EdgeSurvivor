@@ -92,7 +92,22 @@ def delete_discussion(discussion_id):
         if discussion.user_id != current_user_id and activity.creator_id != current_user_id:
             return jsonify({'error': '無權限刪除此訊息'}), 403
         
+        activity_id = discussion.activity_id
         discussion.soft_delete()
+        
+        # 通過 Socket.IO 廣播刪除事件
+        try:
+            from flask_socketio import emit
+            room = f'activity_{activity_id}'
+            print(f'準備廣播刪除事件到房間: {room}, discussion_id: {discussion_id}')
+            emit('discussion_deleted', {
+                'discussion_id': discussion_id,
+                'activity_id': activity_id
+            }, room=room, namespace='/')
+            print(f'✅ 已發送 discussion_deleted 事件到 {room}')
+        except Exception as socket_error:
+            # Socket.IO 廣播失敗不影響刪除操作
+            print(f'❌ Socket.IO 廣播刪除事件失敗: {socket_error}')
         
         return jsonify({'message': '訊息已刪除'}), 200
         
