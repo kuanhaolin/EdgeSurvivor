@@ -36,6 +36,11 @@ const authAPI = {
     return api.post('/auth/google-login', { token })
   },
 
+  // Google OAuth Code Flow 登入
+  googleLoginByCode(code) {
+    return api.post('/auth/google-code', { code })
+  },
+
   // 發送重設密碼驗證碼
   sendResetCode(email) {
     return api.post('/auth/forgot-password', { email })

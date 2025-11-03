@@ -280,6 +280,81 @@ def google_login():
         }
     })
 
+@auth_bp.route('/google-code', methods=['POST'])
+def google_code_login():
+    """以 OAuth 授權碼完成 Google 登入（支援自訂樣式按鈕）"""
+    try:
+        data = request.get_json()
+        code = data.get('code')
+        if not code:
+            return jsonify({'msg': 'Missing authorization code'}), 400
+
+        client_id = os.getenv('GOOGLE_CLIENT_ID')
+        client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+        if not client_id or not client_secret:
+            return jsonify({'msg': 'Server Google OAuth config missing'}), 500
+
+        # 與 Google 交換授權碼取得 tokens（使用 postmessage 做為 redirect_uri）
+        token_resp = requests.post(
+            'https://oauth2.googleapis.com/token',
+            data={
+                'code': code,
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'redirect_uri': 'postmessage',
+                'grant_type': 'authorization_code'
+            },
+            timeout=10
+        )
+        if token_resp.status_code != 200:
+            return jsonify({'msg': 'Failed to exchange authorization code'}), 401
+
+        token_data = token_resp.json()
+        id_token = token_data.get('id_token')
+        if not id_token:
+            return jsonify({'msg': 'Missing id_token in token response'}), 401
+
+        # 與現有流程一致：使用 tokeninfo 驗證 id_token
+        info_resp = requests.get(f'https://oauth2.googleapis.com/tokeninfo?id_token={id_token}', timeout=10)
+        if info_resp.status_code != 200:
+            return jsonify({'msg': 'Invalid id_token'}), 401
+
+        userinfo = info_resp.json()
+        email = userinfo.get('email')
+        name = userinfo.get('name')
+        picture = userinfo.get('picture')
+        if not email:
+            return jsonify({'msg': 'Google account missing email'}), 400
+
+        # 找/建使用者
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            import secrets
+            user = User(
+                name=name,
+                email=email,
+                profile_picture=picture,
+                is_verified=True,
+                is_active=True
+            )
+            user.set_password(secrets.token_urlsafe(32))
+            db.session.add(user)
+            db.session.commit()
+
+        access_token = create_access_token(identity=str(user.user_id))
+        return jsonify({
+            'access_token': access_token,
+            'user': {
+                'user_id': user.user_id,
+                'name': user.name,
+                'email': user.email,
+                'profile_picture': user.profile_picture
+            }
+        })
+    except Exception as e:
+        print(f"Google code login error: {e}")
+        return jsonify({'msg': 'Google code login failed'}), 500
+
 @auth_bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
     """發送重設密碼驗證碼"""
