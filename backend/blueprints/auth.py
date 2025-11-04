@@ -30,7 +30,7 @@ def validate_password(password):
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    """使用者註冊"""
+    """使用者註冊 - Rate limit: 3 per hour"""
     try:
         data = request.get_json()
         
@@ -89,7 +89,7 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    """使用者登入"""
+    """使用者登入 - Rate limit: 5 per minute"""
     try:
         data = request.get_json()
         
@@ -282,7 +282,7 @@ def google_login():
 
 @auth_bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
-    """發送重設密碼驗證碼"""
+    """發送重設密碼驗證碼 - Rate limit: 3 per hour"""
     try:
         data = request.get_json()
         email = data.get('email')

@@ -73,7 +73,17 @@ api.interceptors.response.use(
     }
     
     // 處理其他錯誤
-    if (error.response?.status >= 500) {
+    if (error.response?.status === 429) {
+      // Rate Limiting 錯誤
+      const retryAfter = error.response.headers['retry-after']
+      const errorMsg = error.response.data?.error || '請求過於頻繁，請稍後再試'
+      
+      if (retryAfter) {
+        ElMessage.warning(`${errorMsg} (請等待 ${retryAfter} 秒)`)
+      } else {
+        ElMessage.warning(errorMsg)
+      }
+    } else if (error.response?.status >= 500) {
       ElMessage.error('伺服器錯誤，請稍後再試')
     } else if (error.response?.status === 404) {
       ElMessage.error('請求的資源不存在')

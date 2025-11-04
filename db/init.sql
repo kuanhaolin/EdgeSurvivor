@@ -2,11 +2,11 @@
 
 DROP TABLE IF EXISTS `expenses`;
 DROP TABLE IF EXISTS `chat_messages`;
+DROP TABLE IF EXISTS `activity_reviews`;
 DROP TABLE IF EXISTS `activity_participants`;
 DROP TABLE IF EXISTS `activity_discussions`;
 DROP TABLE IF EXISTS `matches`;
 DROP TABLE IF EXISTS `activities`;
-DROP TABLE IF EXISTS `places`;
 DROP TABLE IF EXISTS `users`;
 
 CREATE TABLE `users` (
@@ -165,4 +165,22 @@ CREATE TABLE `expenses` (
   KEY `payer_id` (`payer_id`),
   CONSTRAINT `expenses_ibfk_1` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`),
   CONSTRAINT `expenses_ibfk_2` FOREIGN KEY (`payer_id`) REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table structure for table `activity_reviews`
+CREATE TABLE `activity_reviews` (
+  `review_id` int(11) NOT NULL AUTO_INCREMENT,
+  `activity_id` int(11) NOT NULL,
+  `reviewer_id` int(11) NOT NULL,
+  `reviewee_id` int(11) NOT NULL,
+  `comment` text NOT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`review_id`),
+  KEY `activity_id` (`activity_id`),
+  KEY `reviewer_id` (`reviewer_id`),
+  KEY `reviewee_id` (`reviewee_id`),
+  CONSTRAINT `activity_reviews_ibfk_1` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`),
+  CONSTRAINT `activity_reviews_ibfk_2` FOREIGN KEY (`reviewer_id`) REFERENCES `users` (`user_id`),
+  CONSTRAINT `activity_reviews_ibfk_3` FOREIGN KEY (`reviewee_id`) REFERENCES `users` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

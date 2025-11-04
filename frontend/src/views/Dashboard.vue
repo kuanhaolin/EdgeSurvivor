@@ -19,7 +19,7 @@
       <!-- 統計卡片 -->
       <el-row :gutter="20" class="stats-row">
         <el-col :xs="24" :sm="12" :md="6">
-          <el-card class="stat-card">
+          <el-card class="stat-card clickable" @click="goToActivities">
             <el-statistic title="我的活動" :value="stats.activities">
               <template #prefix>
                 <el-icon><Calendar /></el-icon>
@@ -29,7 +29,7 @@
         </el-col>
         
         <el-col :xs="24" :sm="12" :md="6">
-          <el-card class="stat-card">
+          <el-card class="stat-card clickable" @click="goToMatches">
             <el-statistic title="好友數量" :value="stats.matches">
               <template #prefix>
                 <el-icon><UserFilled /></el-icon>
@@ -39,7 +39,7 @@
         </el-col>
         
         <el-col :xs="24" :sm="12" :md="6">
-          <el-card class="stat-card">
+          <el-card class="stat-card clickable" @click="goToChat">
             <el-statistic title="未讀訊息" :value="stats.unreadMessages">
               <template #prefix>
                 <el-icon><ChatDotRound /></el-icon>
@@ -49,7 +49,7 @@
         </el-col>
         
         <el-col :xs="24" :sm="12" :md="6">
-          <el-card class="stat-card">
+          <el-card class="stat-card clickable" @click="goToActivities">
             <el-statistic title="評價次數" :value="stats.reviews">
               <template #prefix>
                 <el-icon><Star /></el-icon>
@@ -360,6 +360,27 @@ const goToProfile = () => {
 .stat-card {
   margin-bottom: 20px;
   text-align: center;
+  transition: all 0.3s ease;
+}
+
+.stat-card.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.stat-card.clickable:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+  border-color: #667eea;
+}
+
+.stat-card.clickable:active {
+  transform: translateY(-4px);
+}
+
+/* 確保卡片內部元素不會阻擋點擊事件 */
+.stat-card.clickable :deep(.el-card__body) {
+  pointer-events: none;
 }
 
 .stat-card :deep(.el-statistic__head) {
@@ -370,6 +391,11 @@ const goToProfile = () => {
 .stat-card :deep(.el-statistic__content) {
   font-size: 28px;
   font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+.stat-card.clickable:hover :deep(.el-statistic__content) {
+  color: #667eea;
 }
 
 .quick-actions {

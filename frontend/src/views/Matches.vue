@@ -14,59 +14,86 @@
       
       <!-- 篩選條件 -->
       <el-card class="filter-card">
-        <el-form :inline="true">
-          <el-form-item label="性別">
-            <el-select v-model="filters.gender" placeholder="不限">
-              <el-option label="不限" value="" />
-              <el-option label="男性" value="male" />
-              <el-option label="女性" value="female" />
-              <el-option label="其他" value="other" />
-            </el-select>
-          </el-form-item>
-          
-          <el-form-item label="年齡範圍">
-            <el-slider
-              v-model="filters.ageRange"
-              range
-              :min="18"
-              :max="65"
-              :step="1"
-              show-stops
-              style="width: 200px"
-            />
-          </el-form-item>
-          
-          <el-form-item label="地區">
-            <el-input v-model="filters.location" placeholder="例如：台北" clearable />
-          </el-form-item>
-          
-          <el-form-item label="興趣">
-            <el-select
-              v-model="filters.interests"
-              multiple
-              filterable
-              allow-create
-              default-first-option
-              placeholder="選擇或輸入興趣"
-              style="min-width: 260px"
-            >
-              <el-option
-                v-for="interest in commonInterests"
-                :key="interest"
-                :label="interest"
-                :value="interest"
-              />
-            </el-select>
-          </el-form-item>
-
-          <el-form-item>
-            <el-switch v-model="filters.verifiedOnly" inline-prompt active-text="只看已驗證" />
-          </el-form-item>
+        <template #header>
+          <div class="filter-header">
+            <span>篩選條件</span>
+            <el-button size="small" text @click="resetFilters">
+              <el-icon><RefreshLeft /></el-icon>
+              重置
+            </el-button>
+          </div>
+        </template>
+        
+        <el-form label-position="top" class="filter-form">
+          <el-row :gutter="20">
+            <el-col :xs="24" :sm="12" :md="6">
+              <el-form-item label="性別">
+                <el-select v-model="filters.gender" placeholder="不限" style="width: 100%">
+                  <el-option label="不限" value="" />
+                  <el-option label="男性" value="male" />
+                  <el-option label="女性" value="female" />
+                  <el-option label="其他" value="other" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            
+            <el-col :xs="24" :sm="12" :md="6">
+              <el-form-item label="地區">
+                <el-input v-model="filters.location" placeholder="例如：台北" clearable />
+              </el-form-item>
+            </el-col>
+            
+            <el-col :xs="24" :sm="24" :md="12">
+              <el-form-item label="興趣">
+                <el-select
+                  v-model="filters.interests"
+                  multiple
+                  filterable
+                  allow-create
+                  default-first-option
+                  placeholder="選擇或輸入興趣"
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="interest in commonInterests"
+                    :key="interest"
+                    :label="interest"
+                    :value="interest"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            
+            <el-col :xs="24" :sm="12" :md="12">
+              <el-form-item :label="`年齡範圍：${filters.ageRange[0]} - ${filters.ageRange[1]} 歲`">
+                <el-slider
+                  v-model="filters.ageRange"
+                  range
+                  :min="18"
+                  :max="100"
+                  :step="1"
+                  style="width: 100%"
+                />
+              </el-form-item>
+            </el-col>
+            
+            <el-col :xs="24" :sm="12" :md="12">
+              <el-form-item label="是否驗證" class="switch-form-item">
+                <el-switch 
+                  v-model="filters.verifiedOnly" 
+                  inline-prompt 
+                  active-text="只看已驗證"
+                  inactive-text="全部顯示"
+                  style="--el-switch-on-color: #13ce66"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
         </el-form>
       </el-card>
       
       <!-- 交友列表標籤頁 -->
-      <el-tabs v-model="activeTab" class="matches-tabs">
+      <el-tabs v-model="activeTab" class="matches-tabs" v-loading="loading" element-loading-text="載入旅伴中...">
         <!-- 推薦交友 -->
         <el-tab-pane label="推薦交友" name="recommended">
           <el-row :gutter="20">
@@ -392,7 +419,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -400,12 +427,16 @@ import {
   Location,
   User,
   Select,
-  ChatLineRound
+  ChatLineRound,
+  RefreshLeft
 } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
 
 const router = useRouter()
+
+// Loading 狀態
+const loading = ref(false)
 
 const activeTab = ref('recommended')
 
@@ -424,6 +455,18 @@ const filters = ref({
   verifiedOnly: false
 })
 
+// 重置篩選條件
+const resetFilters = () => {
+  filters.value = {
+    gender: '',
+    ageRange: [18, 100],
+    location: '',
+    interests: [],
+    verifiedOnly: false
+  }
+  ElMessage.success('已重置篩選條件')
+}
+
 // 常見興趣清單（可自行擴充）
 const commonInterests = [
   '登山', '露營', '健行', '旅遊', '攝影',
@@ -438,7 +481,7 @@ const recommendedMatches = ref([])
 // 依前端條件進行即時篩選
 const filteredRecommendedMatches = computed(() => {
   const gender = filters.value.gender
-  const [minAge, maxAge] = filters.value.ageRange || [18, 65]
+  const [minAge, maxAge] = filters.value.ageRange || [18, 100]
   const location = (filters.value.location || '').toLowerCase()
   const interests = filters.value.interests || []
   const verifiedOnly = !!filters.value.verifiedOnly
@@ -831,6 +874,38 @@ const generateMatchLineQRCode = () => {
 
 .filter-card {
   margin: 20px 0;
+}
+
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+
+.filter-form {
+  margin-top: 0;
+}
+
+.filter-form .el-form-item {
+  margin-bottom: 18px;
+}
+
+.switch-form-item {
+  display: flex;
+  align-items: center;
+  padding-top: 8px;
+}
+
+/* RWD 調整 */
+@media (max-width: 768px) {
+  .filter-form .el-col {
+    margin-bottom: 0;
+  }
+  
+  .filter-form .el-form-item {
+    margin-bottom: 12px;
+  }
 }
 
 .matches-tabs {

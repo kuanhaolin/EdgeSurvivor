@@ -10,11 +10,32 @@
         <el-col :xs="24" :md="8">
           <el-card class="profile-card">
             <div class="avatar-section">
-              <el-avatar :size="120" :src="userProfile.avatar" />
-              <el-button type="primary" size="small" class="upload-btn" @click="uploadAvatar">
-                <el-icon><Upload /></el-icon>
-                更換頭像
-              </el-button>
+              <el-dropdown trigger="click" @command="handleAvatarCommand">
+                <div class="avatar-wrapper" @mouseenter="showAvatarOverlay = true" @mouseleave="showAvatarOverlay = false">
+                  <el-avatar :size="120" :src="getAvatarUrl()" class="user-avatar" />
+                  <div class="avatar-overlay" :class="{ 'show': showAvatarOverlay || uploadingAvatar }">
+                    <el-icon v-if="!uploadingAvatar" :size="32"><Camera /></el-icon>
+                    <el-icon v-else :size="32" class="rotating"><Loading /></el-icon>
+                    <span>{{ uploadingAvatar ? '上傳中...' : '編輯頭像' }}</span>
+                  </div>
+                </div>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="upload">
+                      <el-icon><Upload /></el-icon>
+                      更換頭像
+                    </el-dropdown-item>
+                    <el-dropdown-item 
+                      v-if="!isDefaultAvatar()" 
+                      command="remove"
+                      divided
+                    >
+                      <el-icon><Delete /></el-icon>
+                      移除頭像
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
               <!-- 隱藏的文件輸入 -->
               <input
                 ref="avatarInput"
@@ -27,11 +48,11 @@
             
             <div class="user-basic-info">
               <h2>{{ userProfile.name }}</h2>
-              <el-tag v-if="userProfile.verified" type="success">
+              <el-tag v-if="securitySettings.twoFactorAuth" type="success">
                 <el-icon><Select /></el-icon>
-                已驗證
+                2FA 已啟用
               </el-tag>
-              <el-tag v-else type="info">未驗證</el-tag>
+              <el-tag v-else type="warning">2FA 未啟用</el-tag>
             </div>
             
             <el-descriptions :column="1" border class="user-details">
@@ -218,20 +239,27 @@
                       </div>
                       <span>Instagram</span>
                     </div>
-                    <el-input 
-                      v-model="socialLinks.instagram" 
-                      placeholder="https://instagram.com/your_username"
-                      size="large"
-                      clearable
-                    />
-                    <el-button 
-                      v-if="socialLinks.instagram"
-                      class="visit-btn"
-                      @click="openSocialLink(socialLinks.instagram)"
-                      circle
-                    >
-                      <el-icon><Right /></el-icon>
-                    </el-button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <el-input 
+                        v-model="socialLinks.instagram" 
+                        placeholder="https://instagram.com/your_username"
+                        size="large"
+                        clearable
+                        style="flex: 1;"
+                      />
+                      <el-button 
+                        v-if="socialLinks.instagram"
+                        @click="openSocialLink(socialLinks.instagram)"
+                        circle
+                        size="large"
+                      >
+                        <el-icon><Right /></el-icon>
+                      </el-button>
+                    </div>
+                    <div v-if="socialLinks.instagram" class="input-hint" style="background: #fef0f0; color: #f56c6c;">
+                      <el-icon><InfoFilled /></el-icon>
+                      清空後點擊「儲存變更」即可移除此社群帳號
+                    </div>
                   </div>
                   
                   <!-- Facebook -->
@@ -242,20 +270,27 @@
                       </div>
                       <span>Facebook</span>
                     </div>
-                    <el-input 
-                      v-model="socialLinks.facebook" 
-                      placeholder="https://facebook.com/your_profile"
-                      size="large"
-                      clearable
-                    />
-                    <el-button 
-                      v-if="socialLinks.facebook"
-                      class="visit-btn"
-                      @click="openSocialLink(socialLinks.facebook)"
-                      circle
-                    >
-                      <el-icon><Right /></el-icon>
-                    </el-button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <el-input 
+                        v-model="socialLinks.facebook" 
+                        placeholder="https://facebook.com/your_profile"
+                        size="large"
+                        clearable
+                        style="flex: 1;"
+                      />
+                      <el-button 
+                        v-if="socialLinks.facebook"
+                        @click="openSocialLink(socialLinks.facebook)"
+                        circle
+                        size="large"
+                      >
+                        <el-icon><Right /></el-icon>
+                      </el-button>
+                    </div>
+                    <div v-if="socialLinks.facebook" class="input-hint" style="background: #fef0f0; color: #f56c6c;">
+                      <el-icon><InfoFilled /></el-icon>
+                      清空後點擊「儲存變更」即可移除此社群帳號
+                    </div>
                   </div>
                   
                   <!-- LINE ID -->
@@ -266,23 +301,30 @@
                       </div>
                       <span>LINE</span>
                     </div>
-                    <el-input 
-                      v-model="socialLinks.line" 
-                      placeholder="your_line_id"
-                      size="large"
-                      clearable
-                    />
-                    <el-button 
-                      v-if="socialLinks.line"
-                      class="visit-btn"
-                      @click="showLineQRCode"
-                      circle
-                    >
-                      <el-icon><Connection /></el-icon>
-                    </el-button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <el-input 
+                        v-model="socialLinks.line" 
+                        placeholder="your_line_id"
+                        size="large"
+                        clearable
+                        style="flex: 1;"
+                      />
+                      <el-button 
+                        v-if="socialLinks.line"
+                        @click="showLineQRCode"
+                        circle
+                        size="large"
+                      >
+                        <el-icon><Connection /></el-icon>
+                      </el-button>
+                    </div>
                     <div class="input-hint">
                       <el-icon><InfoFilled /></el-icon>
                       輸入您的 LINE ID，其他用戶可以掃描 QR Code 加您好友
+                    </div>
+                    <div v-if="socialLinks.line" class="input-hint" style="background: #fef0f0; color: #f56c6c; margin-top: 8px;">
+                      <el-icon><InfoFilled /></el-icon>
+                      清空後點擊「儲存變更」即可移除此社群帳號
                     </div>
                   </div>
                   
@@ -294,20 +336,27 @@
                       </div>
                       <span>Twitter (X)</span>
                     </div>
-                    <el-input 
-                      v-model="socialLinks.twitter" 
-                      placeholder="https://twitter.com/your_username"
-                      size="large"
-                      clearable
-                    />
-                    <el-button 
-                      v-if="socialLinks.twitter"
-                      class="visit-btn"
-                      @click="openSocialLink(socialLinks.twitter)"
-                      circle
-                    >
-                      <el-icon><Right /></el-icon>
-                    </el-button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <el-input 
+                        v-model="socialLinks.twitter" 
+                        placeholder="https://twitter.com/your_username"
+                        size="large"
+                        clearable
+                        style="flex: 1;"
+                      />
+                      <el-button 
+                        v-if="socialLinks.twitter"
+                        @click="openSocialLink(socialLinks.twitter)"
+                        circle
+                        size="large"
+                      >
+                        <el-icon><Right /></el-icon>
+                      </el-button>
+                    </div>
+                    <div v-if="socialLinks.twitter" class="input-hint" style="background: #fef0f0; color: #f56c6c;">
+                      <el-icon><InfoFilled /></el-icon>
+                      清空後點擊「儲存變更」即可移除此社群帳號
+                    </div>
                   </div>
                   
                   <div class="form-actions">
@@ -557,7 +606,11 @@ import {
   InfoFilled,
   Link,
   Right,
-  Connection
+  Connection,
+  Loading,
+  Close,
+  Camera,
+  Delete
 } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
@@ -565,6 +618,7 @@ import axios from '@/utils/axios'
 const router = useRouter()
 
 const activeTab = ref('basic')
+const showAvatarOverlay = ref(false)
 
 // 地區選擇器配置
 const selectedLocation = ref([])
@@ -815,6 +869,7 @@ const originalSocialLinks = reactive({
 })
 
 const showLineQRDialog = ref(false)
+const uploadingAvatar = ref(false)
 
 // 密碼變更
 const showPasswordDialog = ref(false)
@@ -824,8 +879,8 @@ const passwordForm = reactive({
   confirmPassword: ''
 })
 
-// 載入用戶資料
-onMounted(async () => {
+// 載入用戶資料函式（可重用）
+const loadUserProfile = async () => {
   try {
     // 從 API 載入用戶資料
     const response = await axios.get('/users/profile')
@@ -839,7 +894,7 @@ onMounted(async () => {
         age: user.age || 18,
         location: user.location || '',
         bio: user.bio || '',
-        avatar: user.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+        avatar: user.profile_picture || user.avatar || null,
         verified: user.is_verified || false,
         joinDate: new Date(user.join_date).toLocaleDateString('zh-TW'),
         stats: {
@@ -916,6 +971,11 @@ onMounted(async () => {
     // 解析地區並設置級聯選擇器
     parseLocationString(userProfile.value.location)
   }
+}
+
+// 載入用戶資料
+onMounted(async () => {
+  await loadUserProfile()
 })
 
 // 解析地區字串並設置級聯選擇器
@@ -957,11 +1017,84 @@ const goBack = () => {
   router.back()
 }
 
+// 獲取頭像 URL（如果沒有則返回預設頭像）
+const getAvatarUrl = () => {
+  if (userProfile.value.avatar && userProfile.value.avatar !== 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png') {
+    return userProfile.value.avatar
+  }
+  
+  // 使用中性的抽象頭像（不分性別）
+  // 使用 initials（首字母）或抽象圖案風格
+  const userName = userProfile.value.name || 'User'
+  const seed = userName.toLowerCase().replace(/\s+/g, '')
+  
+  // 使用 bottts（機器人風格）或 shapes（抽象幾何）風格，更中性
+  return `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${seed}&backgroundColor=gradient`
+}
+
+// 檢查是否為預設頭像
+const isDefaultAvatar = () => {
+  const currentAvatar = userProfile.value.avatar
+  if (!currentAvatar || currentAvatar === 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png') {
+    return true
+  }
+  // 檢查是否為 dicebear API 生成的頭像
+  return currentAvatar.includes('dicebear.com')
+}
+
+// 移除頭像
+const removeAvatar = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '確定要移除自訂頭像嗎？將恢復為預設頭像。',
+      '確認移除',
+      {
+        confirmButtonText: '確定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    // 更新到後端
+    await axios.put('/users/profile', {
+      profile_picture: null
+    })
+    
+    // 更新本地狀態
+    userProfile.value.avatar = null
+    
+    // 更新本地存儲
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    user.profile_picture = null
+    user.avatar = null
+    localStorage.setItem('user', JSON.stringify(user))
+    
+    ElMessage.success('已移除自訂頭像')
+    
+    // 重新載入用戶資料
+    await loadUserProfile()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('移除頭像失敗:', error)
+      ElMessage.error('移除頭像失敗，請重試')
+    }
+  }
+}
+
 // 上傳頭像
 const avatarInput = ref(null)
 
 const uploadAvatar = () => {
   avatarInput.value?.click()
+}
+
+// 處理頭像下拉選單命令
+const handleAvatarCommand = (command) => {
+  if (command === 'upload') {
+    uploadAvatar()
+  } else if (command === 'remove') {
+    removeAvatar()
+  }
 }
 
 const handleAvatarUpload = async (event) => {
@@ -979,6 +1112,14 @@ const handleAvatarUpload = async (event) => {
   }
 
   try {
+    uploadingAvatar.value = true
+    const loadingMessage = ElMessage({
+      message: '正在上傳頭像...',
+      type: 'info',
+      duration: 0,
+      icon: 'Loading'
+    })
+    
     // 上傳到服務器
     const formData = new FormData()
     formData.append('image', file)
@@ -1013,17 +1154,23 @@ const handleAvatarUpload = async (event) => {
     user.avatar = data.url
     localStorage.setItem('user', JSON.stringify(user))
     
-    ElMessage.success('頭像上傳成功！')
+    loadingMessage.close()
+    ElMessage.success({
+      message: '頭像上傳成功！',
+      type: 'success',
+      duration: 2000
+    })
     
     // 重新載入用戶資料
     await loadUserProfile()
   } catch (error) {
     console.error('上傳頭像失敗:', error)
     ElMessage.error('頭像上傳失敗，請重試')
+  } finally {
+    uploadingAvatar.value = false
+    // 清空 input
+    event.target.value = ''
   }
-  
-  // 清空 input
-  event.target.value = ''
 }
 
 // 新增興趣
@@ -1345,7 +1492,14 @@ const verifyTwoFactorCode = async () => {
     if (response.data && response.data.success) {
       ElMessage.success('兩步驟驗證已啟用')
       showTwoFactorDialog.value = false
-      securitySettings.twoFactorAuth = true
+      
+      // 重新載入使用者資料以取得最新的 two_factor_enabled 狀態
+      await loadUserProfile()
+      
+      // 清空驗證碼
+      twoFactorCode.value = ''
+      twoFactorSecret.value = ''
+      twoFactorStep.value = 0
     } else {
       ElMessage.error('驗證碼錯誤，請重試')
     }
@@ -1398,7 +1552,12 @@ const confirmDisableTwoFactor = async () => {
     if (response.data && response.data.success) {
       ElMessage.success('兩步驟驗證已停用')
       showDisableTwoFactorDialog.value = false
-      securitySettings.twoFactorAuth = false
+      
+      // 重新載入使用者資料以取得最新的 two_factor_enabled 狀態
+      await loadUserProfile()
+      
+      // 清空驗證碼
+      disableTwoFactorCode.value = ''
     } else {
       ElMessage.error('驗證碼錯誤，請重試')
     }
@@ -1495,6 +1654,77 @@ const deleteAccount = async () => {
 
 .avatar-section {
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.avatar-wrapper {
+  position: relative;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: all 0.3s ease;
+}
+
+.avatar-wrapper:active {
+  transform: scale(0.97);
+}
+
+.user-avatar {
+  border: 4px solid #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.avatar-wrapper:hover .user-avatar {
+  box-shadow: 0 4px 20px rgba(64, 158, 255, 0.3);
+  border-color: #409eff;
+}
+
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.9) 0%, rgba(103, 194, 255, 0.9) 100%);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: white;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  font-size: 14px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.avatar-overlay.show {
+  opacity: 1;
+}
+
+.avatar-overlay .el-icon {
+  color: white;
+}
+
+.avatar-overlay span {
+  user-select: none;
+}
+
+.rotating {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .upload-btn {
@@ -1663,9 +1893,6 @@ const deleteAccount = async () => {
 }
 
 .visit-btn {
-  position: absolute;
-  right: 20px;
-  top: 68px;
   background: #409eff;
   color: white;
   border: none;
@@ -1718,12 +1945,6 @@ const deleteAccount = async () => {
   
   .social-input-group {
     padding: 16px;
-  }
-  
-  .visit-btn {
-    position: static;
-    margin-top: 12px;
-    width: 100%;
   }
 }
 </style>

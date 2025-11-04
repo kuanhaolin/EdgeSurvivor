@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db
 from models.user import User
@@ -12,7 +12,8 @@ users_bp = Blueprint('users', __name__)
 @users_bp.route('/stats', methods=['GET'])
 @jwt_required()
 def get_user_stats():
-    """獲取用戶統計數據"""
+    """獲取用戶統計數據（高頻率 API，不限制）"""
+    # 使用 current_app.limiter.exempt 豁免此端點
     try:
         current_user_id = int(get_jwt_identity())
         
@@ -79,7 +80,7 @@ def get_user_stats():
 @users_bp.route('/recent-activities', methods=['GET'])
 @jwt_required()
 def get_recent_activities():
-    """獲取最近的活動（包含創建的和參加的）"""
+    """獲取最近的活動（包含創建的和參加的）- 高頻率 API，不限制"""
     try:
         current_user_id = int(get_jwt_identity())
         

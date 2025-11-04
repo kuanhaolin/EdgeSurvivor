@@ -156,7 +156,7 @@
                     圖片
                   </el-button>
                 </el-button-group>
-                <el-button type="primary" @click="sendMessage">
+                <el-button type="primary" @click="sendMessage" :loading="sending">
                   發送
                   <el-icon><Promotion /></el-icon>
                 </el-button>
@@ -241,6 +241,11 @@ import socketService from '@/services/socket'
 const router = useRouter()
 const route = useRoute()
 
+// Loading 狀態
+const loading = ref(false)
+const messagesLoading = ref(false)
+const sending = ref(false)
+
 // 搜尋
 const searchQuery = ref('')
 
@@ -261,6 +266,7 @@ const messageScrollbar = ref(null)
 
 // 載入聊天列表
 const loadConversations = async () => {
+  loading.value = true
   try {
     const response = await axios.get('/chat/conversations')
     
@@ -293,12 +299,17 @@ const loadConversations = async () => {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       router.push('/login')
+    } else {
+      ElMessage.error('載入聊天列表失敗，請稍後再試')
     }
+  } finally {
+    loading.value = false
   }
 }
 
 // 載入聊天訊息
 const loadMessages = async (userId) => {
+  messagesLoading.value = true
   try {
     const response = await axios.get(`/chat/${userId}/messages`)
     
@@ -324,8 +335,11 @@ const loadMessages = async (userId) => {
     })
   } catch (error) {
     console.error('載入訊息失敗:', error)
+    ElMessage.error('載入訊息失敗，請稍後再試')
     // 發生錯誤時也設為空陣列，這樣可以開始新聊天
     messages.value = []
+  } finally {
+    messagesLoading.value = false
   }
 }
 
@@ -425,6 +439,7 @@ const sendMessage = async () => {
     return
   }
   
+  sending.value = true
   try {
     const currentUser = JSON.parse(localStorage.getItem('user'))
     
@@ -519,8 +534,19 @@ const sendMessage = async () => {
     }
   } catch (error) {
     console.error('發送訊息失敗:', error)
-    ElMessage.error('發送訊息失敗')
+    ElMessage.error('發送訊息失敗，請稍後再試')
+  } finally {
+    sending.value = false
   }
+}
+
+// 處理 Enter 快捷鍵發送
+const handleKeyDown = (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    sendMessage()
+  }
+  // Shift+Enter 允許換行
 }
 
 // 組件掛載時載入聊天列表
