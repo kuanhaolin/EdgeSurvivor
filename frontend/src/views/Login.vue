@@ -74,7 +74,9 @@
         <!-- 分隔線 -->
         <el-divider>或</el-divider>
         
-        <!-- Google 登入按鈕 -->
+        <!-- Google 登入按鈕（僅保留自訂樣式的按鈕） -->
+
+        <!-- 可見的 Google 官方按鈕（備援；當 One Tap 無法顯示時請點這個） -->
         <el-form-item>
           <el-button
             style="width: 100%"
@@ -89,7 +91,7 @@
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
             使用 Google 登入
-        </el-button>
+          </el-button>
         </el-form-item>
         
         <el-form-item>
@@ -101,8 +103,7 @@
           </el-button>
         </el-form-item>
         
-        <!-- 隱藏的 Google 按鈕用於觸發 OAuth -->
-        <div id="google-signin-button-hidden" style="position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none;"></div>
+  <!-- 移除隱藏按鈕，改以可見官方按鈕提高穩定性 -->
       </el-form>
     </el-card>
   </div>
@@ -120,7 +121,9 @@ const router = useRouter()
 const authStore = useAuthStore()
 const loginFormRef = ref(null)
 const loading = ref(false)
-const googleLoading = ref(false)
+const gisReady = ref(false)
+let gisInitStarted = false
+let codeClient = null
 
 const require2FA = ref(false)
 
@@ -204,22 +207,18 @@ const handleLogin = async () => {
 // Google 登入功能
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '你的Google Client ID'
 
-// 手動觸發 Google 登入
-const handleGoogleLogin = () => {
-  googleLoading.value = true
-  
-  // 找到隱藏的 Google 按鈕並點擊
-  const hiddenButton = document.querySelector('#google-signin-button-hidden div[role="button"]')
-  if (hiddenButton) {
-    hiddenButton.click()
-  } else {
-    ElMessage.error('Google 登入服務未就緒，請稍後再試')
-    googleLoading.value = false
-  }
-}
+// Debug: 檢查 Client ID
+console.log('VITE_GOOGLE_CLIENT_ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID)
+console.log('GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID)
 
-// Google 登入回調函數
-const handleGoogleCallback = async (response) => {
+// 移除 One Tap 觸發流程，改用 Code Flow 的自訂按鈕
+
+// 自訂按鈕：使用 OAuth Code Flow 以確保「使用者手勢」且可自訂外觀
+const handleGoogleCodeLogin = () => {
+  if (!window.google || !gisReady.value || !codeClient) {
+    ElMessage.info('Google 登入服務準備中，請稍後再試')
+    return
+  }
   try {
     if (response.credential) {
       console.log('收到 Google ID Token')
@@ -262,31 +261,50 @@ const handleGoogleCallback = async (response) => {
   }
 }
 
+// 移除 ID Token 直接登入回調（改用 Code Flow）
+
   // 載入 Google Identity Services 並渲染按鈕
 onMounted(() => {
   // 確保 Google API 已載入並初始化
   const initGoogle = () => {
-    if (window.google) {
+    if (window.google && !gisInitStarted) {
+      gisInitStarted = true
       console.log('Google Identity Services 已載入')
+      console.log('使用的 Client ID:', GOOGLE_CLIENT_ID)
       
-      // 初始化 Google Identity Services
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleCallback,
-        auto_select: false
-      })
+      // 初始化 OAuth Code Flow 用的 code client（供自訂樣式的按鈕使用）
+      try {
+        codeClient = window.google.accounts.oauth2.initCodeClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: 'openid email profile',
+          ux_mode: 'popup',
+          callback: async (resp) => {
+            try {
+              if (resp && resp.code) {
+                const result = await authAPI.googleLoginByCode(resp.code)
+                if (result.data?.access_token) {
+                  localStorage.setItem('token', result.data.access_token)
+                  localStorage.setItem('user', JSON.stringify(result.data.user))
+                  ElMessage.success('Google 登入成功！')
+                  setTimeout(() => router.push('/dashboard'), 300)
+                } else {
+                  ElMessage.error(result.data?.msg || 'Google 登入失敗，請稍後再試')
+                }
+              } else {
+                ElMessage.info('未取得 Google 授權碼，請重試')
+              }
+            } catch (err) {
+              console.error('Google Code Flow 後端交換失敗:', err)
+              ElMessage.error(err.response?.data?.msg || 'Google 登入失敗，請稍後再試')
+            }
+          }
+        })
+      } catch (e) {
+        console.error('初始化 Google Code Client 失敗:', e)
+      }
       
-      // 渲染隱藏的 Google 按鈕供點擊觸發
-      window.google.accounts.id.renderButton(
-        document.getElementById('google-signin-button-hidden'),
-        {
-          type: 'standard',
-          size: 'large',
-          width: 400
-        }
-      )
-      
-      console.log('Google Identity Services 初始化完成')
+      console.log('Google Code Client 初始化完成')
+      gisReady.value = true
     } else {
       // 如果還沒載入，100ms 後重試
       setTimeout(initGoogle, 100)

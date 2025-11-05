@@ -37,7 +37,12 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost:3000", "http://localhost:8080"],
+            "origins": [
+                "http://localhost:3000", 
+                "http://localhost:8080",
+                "https://edgesurvivor.ddns.net",
+                "http://edgesurvivor.ddns.net"
+            ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"]
         }

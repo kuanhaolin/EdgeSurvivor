@@ -67,3 +67,6 @@ logs/
 # 暫存檔案
 *.tmp
 *.temp
+
+# 密鑰生產
+scripts/generate_secret.py
