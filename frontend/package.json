@@ -7,7 +7,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "serve": "vue-cli-service serve",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix"
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.1.0",
@@ -25,11 +27,14 @@
     "@vitejs/plugin-vue": "^4.5.0",
     "@vue/cli-service": "^5.0.8",
     "@vue/eslint-config-prettier": "^8.0.0",
+    "@vue/test-utils": "^2.4.1",
     "eslint": "^8.54.0",
     "eslint-plugin-vue": "^9.18.1",
+    "jsdom": "^23.0.0",
     "prettier": "^3.1.0",
     "sass": "^1.69.5",
-    "vite": "^4.5.3"
+    "vite": "^4.5.3",
+    "vitest": "^1.0.4"
   },
   "browserslist": [
     "> 1%",

@@ -72,6 +72,13 @@ def register():
         db.session.add(user)
         db.session.commit()
         
+        # 發送歡迎郵件 (可選，失敗不影響註冊)
+        try:
+            send_welcome_email(email, name)
+        except Exception as email_error:
+            print(f"發送歡迎郵件失敗: {email_error}")
+            # 不中斷註冊流程
+        
         # 建立 JWT Token - 使用字串格式的 user_id
         access_token = create_access_token(identity=str(user.user_id))
         refresh_token = create_refresh_token(identity=str(user.user_id))

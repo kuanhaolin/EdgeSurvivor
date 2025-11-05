@@ -1,0 +1,27 @@
+# EdgeSurvivor 前端技術架構文件
+
+## Table of Contents
+
+- [EdgeSurvivor 前端技術架構文件](#table-of-contents)
+  - [變更日誌 (Change Log)](#變更日誌-change-log)
+  - [1. 簡介 (Introduction)](#1-簡介-introduction)
+  - [2. 前端技術棧 (Frontend Tech Stack)](#2-前端技術棧-frontend-tech-stack)
+  - [3. 專案結構 (Project Structure)](#3-專案結構-project-structure)
+  - [4. 組件標準 (Component Standards)](#4-組件標準-component-standards)
+  - [5. 狀態管理 (State Management)](#5-狀態管理-state-management)
+  - [6. API 整合 (API Integration)](#6-api-整合-api-integration)
+  - [7. 路由配置 (Routing)](#7-路由配置-routing)
+  - [8. 樣式指南 (Styling Guidelines)](#8-樣式指南-styling-guidelines)
+  - [9. Socket.IO 整合 (services/socket.js)](#9-socketio-整合-servicessocketjs)
+  - [10. 環境配置 (Environment Configuration)](#10-環境配置-environment-configuration)
+  - [11. 測試策略 (Testing Requirements)](#11-測試策略-testing-requirements)
+  - [12. 前端開發者標準 (Frontend Developer Standards)](#12-前端開發者標準-frontend-developer-standards)
+  - [13. 效能優化檢查清單 (Performance Optimization Checklist)](#13-效能優化檢查清單-performance-optimization-checklist)
+  - [14. 無障礙性檢查清單 (Accessibility Checklist)](#14-無障礙性檢查清單-accessibility-checklist)
+  - [15. 部署與 CI/CD (Deployment)](#15-部署與-cicd-deployment)
+  - [16. 故障排除 (Troubleshooting)](#16-故障排除-troubleshooting)
+  - [17. 未來改進建議 (Future Improvements)](#17-未來改進建議-future-improvements)
+  - [18. 參考資源 (References)](#18-參考資源-references)
+  - [附錄 A：專案檔案對應表](#附錄-a專案檔案對應表)
+  - [附錄 B：API 端點映射表](#附錄-bapi-端點映射表)
+  - [附錄 C：組件層級結構](#附錄-c組件層級結構)

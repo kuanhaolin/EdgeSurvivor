@@ -162,11 +162,13 @@ import {
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
 import socketService from '@/services/socket'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
-// 用戶資訊
-const user = ref(null)
+// 從 auth store 獲取用戶資訊
+const user = computed(() => authStore.user)
 const userName = computed(() => {
   if (!user.value) return '旅行者'
   // 優先使用 name，如果沒有則使用 email 的前半部分
@@ -210,10 +212,34 @@ const recentActivities = ref([])
 const recentMatches = ref([])
 
 // 載入用戶資訊
-onMounted(() => {
-  const userStr = localStorage.getItem('user')
-  if (userStr) {
-    user.value = JSON.parse(userStr)
+onMounted(async () => {
+  console.log('Dashboard 載入')
+  console.log('當前用戶:', user.value)
+  console.log('Token:', authStore.token)
+  
+  // 如果沒有用戶資訊但有 token，從後端獲取
+  if (!user.value && authStore.token) {
+    try {
+      console.log('嘗試從後端獲取用戶資訊...')
+      await authStore.fetchCurrentUser()
+      console.log('成功獲取用戶資訊:', authStore.user)
+    } catch (error) {
+      console.error('獲取用戶資訊失敗:', error)
+      // 401 錯誤表示 token 無效，auth store 已經處理了跳轉
+      if (error.response?.status !== 401) {
+        ElMessage.error('無法獲取用戶資訊，請重新登入')
+        router.push('/login')
+      }
+      return
+    }
+  }
+  
+  // 如果既沒有用戶資訊也沒有 token，路由守衛應該會攔截
+  // 這裡是備用檢查
+  if (!user.value) {
+    console.warn('沒有用戶資訊，跳轉到登入頁')
+    router.push('/login')
+    return
   }
   
   // 從 API 載入實際數據

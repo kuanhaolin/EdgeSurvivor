@@ -10,7 +10,8 @@ const instance = axios.create({
 // 請求攔截器 - 自動添加 Authorization header
 instance.interceptors.request.use(
   config => {
-    const token = localStorage.getItem('token')
+    // 修正：使用 access_token 而不是 token
+    const token = localStorage.getItem('access_token')
     if (token) {
       // 確保 headers 對象存在
       if (!config.headers) {
