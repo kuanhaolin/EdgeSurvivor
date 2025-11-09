@@ -1,0 +1,19 @@
+
+sequenceDiagram
+  participant User
+  participant Frontend
+  participant Backend
+  participant DB
+
+  User->>Frontend: 點擊「參加活動」按鈕
+  Frontend->>Backend: 呼叫 join_activity()
+  Backend->>DB: 檢查活動狀態與參加資格
+  DB-->>Backend: 回傳檢查結果
+  Backend->>Backend: 建立參加申請紀錄
+  Backend->>DB: 寫入申請資料
+  DB-->>Backend: 回傳寫入結果
+  Backend->>Backend: 進行審核 approve_participant()
+  Backend->>DB: 更新參加者狀態
+  DB-->>Backend: 回傳更新結果
+  Backend->>Frontend: 回傳審核結果
+  Frontend->>User: 顯示審核通過/失敗

@@ -1,0 +1,34 @@
+graph TD
+  %% === 前端 ===
+  subgraph 前端 Frontend
+    FE1[Web Client Vue 3 + Vite + Pinia + Element Plus]
+  end
+
+  %% === 後端 ===
+  subgraph 後端 Backend
+    BE1[Flask API Server Blueprints / JWT / REST API]
+    BE2[Socket.IO Server 即時聊天 / 討論串同步]
+  end
+
+  %% === 資料庫 ===
+  subgraph 資料庫 Database
+    DB1[(MariaDB 10.11)]
+    DB2[(Redis 用於即時訊息)]
+    DB3[(Uploads Folder 本地檔案儲存)]
+  end
+
+  %% === 外部服務 ===
+  subgraph 外部服務 External
+    EX1[Email Service SMTP / SendGrid]
+    EX2[Google OAuth 登入整合]
+  end
+
+  %% === 資料流 ===
+  FE1 -- REST API --> BE1
+  FE1 -- WebSocket --> BE2
+  BE1 -- SQLAlchemy ORM --> DB1
+  BE1 -- Cache / Queue --> DB2
+  BE1 -- File Upload --> DB3
+  BE1 -- Email 通知 --> EX1
+  BE1 -- OAuth 登入 --> EX2
+  BE2 -- Message Sync --> DB2

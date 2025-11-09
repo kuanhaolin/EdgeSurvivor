@@ -1,0 +1,34 @@
+@startuml
+entity "          User             " as USER {
+
+}
+entity "           Activity          " as ACTIVITY {
+
+}
+entity "           Match           " as MATCH {
+ 
+}
+entity "       ChatMessage       " as CHAT_MESSAGE {
+
+}
+entity "         Review         " as REVIEW {
+
+}
+entity "         Expense         " as EXPENSE {
+
+}
+entity "       ActivityParticipant       " as ACTIVITY_PARTICIPANT
+entity "       ActivityDiscussion       " as ACTIVITY_DISCUSSION
+
+USER ||--o{ ACTIVITY : "參加"
+USER ||--o{ MATCH : "媒合"
+USER ||--o{ CHAT_MESSAGE : "發送"
+USER ||--o{ REVIEW : "評價"
+USER ||--o{ EXPENSE : "產生"
+ACTIVITY ||--o{ ACTIVITY_PARTICIPANT : "參與者"
+ACTIVITY ||--o{ ACTIVITY_DISCUSSION : "討論"
+ACTIVITY ||--o{ CHAT_MESSAGE : "包含"
+ACTIVITY ||--o{ EXPENSE : "包含"
+MATCH ||--o{ CHAT_MESSAGE : "互動"
+EXPENSE ||--o{ USER : "分攤"
+@enduml

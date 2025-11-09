@@ -1,0 +1,26 @@
+
+sequenceDiagram
+  participant User
+  participant Frontend
+  participant Backend
+  participant DB
+  participant SocketIO
+  User->>Frontend: 登入
+  Frontend->>Backend: 傳送登入資料
+  Backend->>DB: 查詢使用者
+  DB-->>Backend: 回傳結果
+  Backend->>Frontend: 回傳登入結果 (JWT)
+  Frontend->>User: 顯示登入狀態
+  User->>Frontend: 進入活動聊天室
+  Frontend->>SocketIO: 建立 WebSocket 連線
+  SocketIO->>Backend: 驗證 JWT
+  Backend->>DB: 查詢活動參與者
+  DB-->>Backend: 回傳參與者
+  Backend->>SocketIO: 允許連線
+  User->>Frontend: 發送訊息
+  Frontend->>SocketIO: 傳送訊息
+  SocketIO->>Backend: 訊息入庫
+  Backend->>DB: 寫入 chat_messages
+  DB-->>Backend: 回傳結果
+  Backend->>SocketIO: 廣播訊息
+  SocketIO->>Frontend: 顯示訊息

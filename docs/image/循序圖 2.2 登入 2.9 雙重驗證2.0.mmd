@@ -1,0 +1,62 @@
+sequenceDiagram
+  participant User
+  participant Frontend
+  participant Backend
+  participant DB
+  participant AuthService
+
+  %% 登入流程
+  User->>Frontend: 輸入帳號密碼
+  Frontend->>Backend: 呼叫 login()
+  Backend->>DB: 查詢使用者帳號
+  DB-->>Backend: 回傳使用者資料
+  Backend->>Backend: 驗證密碼
+  
+  alt 未啟用雙重驗證
+    Backend->>Backend: 產生 JWT Token
+    Backend->>Frontend: 回傳登入成功 + Token
+    Frontend->>User: 顯示登入成功
+  else 已啟用雙重驗證
+    Backend->>Frontend: 回傳需要雙重驗證
+    Frontend->>User: 顯示雙重驗證頁面
+    User->>Frontend: 輸入驗證碼
+    Frontend->>Backend: 呼叫 verify_two_factor()
+    Backend->>AuthService: 驗證 TOTP 碼
+    AuthService-->>Backend: 回傳驗證結果
+    alt 驗證成功
+      Backend->>Backend: 產生 JWT Token
+      Backend->>Frontend: 回傳登入成功 + Token
+      Frontend->>User: 顯示登入成功
+    else 驗證失敗
+      Backend->>Frontend: 回傳驗證失敗
+      Frontend->>User: 顯示驗證錯誤
+    end
+  end
+
+  %% 設定雙重驗證
+  User->>Frontend: 前往安全設定頁面
+  Frontend->>Backend: 呼叫 setup_two_factor()
+  Backend->>AuthService: 產生 TOTP Secret
+  AuthService-->>Backend: 回傳 Secret + QR Code
+  Backend->>DB: 暫存 Secret (未啟用)
+  DB-->>Backend: 回傳結果
+  Backend->>Frontend: 回傳 QR Code
+  Frontend->>User: 顯示 QR Code
+  User->>Frontend: 掃描 QR Code 並輸入驗證碼
+  Frontend->>Backend: 呼叫 verify_two_factor() 確認
+  Backend->>AuthService: 驗證 TOTP 碼
+  AuthService-->>Backend: 回傳驗證結果
+  Backend->>DB: 啟用雙重驗證
+  DB-->>Backend: 回傳結果
+  Backend->>Frontend: 回傳啟用成功
+  Frontend->>User: 顯示雙重驗證已啟用
+
+  %% 停用雙重驗證
+  User->>Frontend: 點擊停用雙重驗證
+  Frontend->>Backend: 呼叫 disable_two_factor()
+  Backend->>DB: 查詢使用者設定
+  DB-->>Backend: 回傳設定
+  Backend->>DB: 移除雙重驗證設定
+  DB-->>Backend: 回傳結果
+  Backend->>Frontend: 回傳停用成功
+  Frontend->>User: 顯示雙重驗證已停用

@@ -1,0 +1,45 @@
+@startuml
+package "前端 Frontend (Vue3 SPA)" {
+  [App.vue] --> [ActivitiesView]
+  [App.vue] --> [ChatView]
+  [App.vue] --> [ProfileView]
+  [ActivitiesView] --> [ActivityCard]
+  [ChatView] --> [ChatWindow]
+  [ProfileView] --> [UserProfile]
+  [axios.js] ..> [API Interface] : REST
+  [socket.js] ..> [SocketIO Interface] : WebSocket
+  [Pinia Store] ..> [App.vue]
+}
+
+package "後端 Backend (Flask)" {
+  [app.py] --> [Blueprint: Auth]
+  [app.py] --> [Blueprint: Activities]
+  [app.py] --> [Blueprint: Chat]
+  [app.py] --> [Blueprint: Matches]
+  [app.py] --> [Blueprint: Expenses]
+  [app.py] --> [Blueprint: Reviews]
+  [Blueprint: Auth] ..> [User Model]
+  [Blueprint: Activities] ..> [Activity Model]
+  [Blueprint: Chat] ..> [ChatMessage Model]
+  [Blueprint: Matches] ..> [Match Model]
+  [Blueprint: Expenses] ..> [Expense Model]
+  [Blueprint: Reviews] ..> [Review Model]
+  [socketio_events.py] ..> [SocketIO Interface]
+  [config.py] ..> [JWT]
+  [config.py] ..> [CORS]
+}
+
+package "資料庫 Database (MariaDB)" {
+  [User Model] --> [users table]
+  [Activity Model] --> [activities table]
+  [ChatMessage Model] --> [chat_messages table]
+  [Match Model] --> [matches table]
+  [Expense Model] --> [expenses table]
+  [Review Model] --> [reviews table]
+}
+
+[App.vue] ..> [app.py] : REST API
+[ChatWindow] ..> [socketio_events.py] : Socket.IO
+[Pinia Store] ..> [App.vue] : 狀態管理
+[app.py] ..> [資料庫 Database (MariaDB)] : ORM
+@enduml

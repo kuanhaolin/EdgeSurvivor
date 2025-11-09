@@ -1,0 +1,80 @@
+erDiagram
+  USERS {
+    int id PK
+    string name
+    string email
+    string password
+    datetime created_at
+  }
+
+  ACTIVITIES {
+    int id PK
+    string title
+    string description
+    date date
+    string location
+    int creator_id FK
+  }
+
+  MATCHES {
+    int id PK
+    int user_id FK
+    int target_user_id FK
+    string status
+    datetime created_at
+  }
+
+  CHAT_MESSAGES {
+    int id PK
+    int activity_id FK
+    int sender_id FK
+    string content
+    datetime timestamp
+  }
+
+  EXPENSES {
+    int id PK
+    int activity_id FK
+    int user_id FK
+    decimal amount
+    string description
+    datetime created_at
+  }
+
+  REVIEWS {
+    int id PK
+    int activity_id FK
+    int user_id FK
+    int score
+    string comment
+    datetime created_at
+  }
+
+  ACTIVITY_PARTICIPANTS {
+    int id PK
+    int activity_id FK
+    int user_id FK
+    datetime joined_at
+  }
+
+  ACTIVITY_DISCUSSIONS {
+    int id PK
+    int activity_id FK
+    int user_id FK
+    string content
+    datetime created_at
+  }
+
+  USERS ||--o{ ACTIVITIES : creates
+  USERS ||--o{ MATCHES : matches
+  USERS ||--o{ CHAT_MESSAGES : sends
+  USERS ||--o{ EXPENSES : pays
+  USERS ||--o{ REVIEWS : writes
+  USERS ||--o{ ACTIVITY_PARTICIPANTS : joins
+  USERS ||--o{ ACTIVITY_DISCUSSIONS : discusses
+
+  ACTIVITIES ||--o{ ACTIVITY_PARTICIPANTS : has
+  ACTIVITIES ||--o{ ACTIVITY_DISCUSSIONS : has
+  ACTIVITIES ||--o{ CHAT_MESSAGES : has
+  ACTIVITIES ||--o{ EXPENSES : has
+  ACTIVITIES ||--o{ REVIEWS : has

@@ -1,0 +1,90 @@
+classDiagram
+  class User {
+    +id
+    +name
+    +email
+    +password
+    +created_at
+    +login()
+    +register()
+    +resetPassword()
+    +getActivities()
+    +getMatches()
+    +sendMessage()
+  }
+  class Activity {
+    +id
+    +title
+    +description
+    +date
+    +location
+    +creator_id
+    +create()
+    +edit()
+    +addParticipant(user)
+    +addDiscussion(user, content)
+    +addExpense(user, amount)
+    +addReview(user, score, comment)
+  }
+  class Match {
+    +id
+    +user_id
+    +target_user_id
+    +status
+    +created_at
+    +accept()
+    +reject()
+  }
+  class ChatMessage {
+    +id
+    +activity_id
+    +sender_id
+    +content
+    +timestamp
+    +send()
+    +delete()
+  }
+  class Expense {
+    +id
+    +activity_id
+    +user_id
+    +amount
+    +description
+    +created_at
+    +split()
+  }
+  class Review {
+    +id
+    +activity_id
+    +user_id
+    +score
+    +comment
+    +created_at
+    +submit()
+  }
+  class ActivityParticipant {
+    +id
+    +activity_id
+    +user_id
+    +joined_at
+  }
+  class ActivityDiscussion {
+    +id
+    +activity_id
+    +user_id
+    +content
+    +created_at
+  }
+  User "1" --o "*" Activity : creates/joins
+  User "1" --o "*" Match : matches
+  User "1" --o "*" ChatMessage : sends
+  User "1" --o "*" Expense : pays
+  User "1" --o "*" Review : writes
+  User "1" --o "*" ActivityParticipant : joins
+  User "1" --o "*" ActivityDiscussion : discusses
+  Activity "1" --o "*" ActivityParticipant : has
+  Activity "1" --o "*" ActivityDiscussion : has
+  Activity "1" --o "*" ChatMessage : has
+  Activity "1" --o "*" Expense : has
+  Activity "1" --o "*" Review : has
+```
