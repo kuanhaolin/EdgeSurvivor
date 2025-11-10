@@ -213,50 +213,23 @@ console.log('GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID)
 
 // 移除 One Tap 觸發流程，改用 Code Flow 的自訂按鈕
 
-// 自訂按鈕：使用 OAuth Code Flow 以確保「使用者手勢」且可自訂外觀
-const handleGoogleCodeLogin = () => {
+// 自訂按鈕：使用 OAuth Code Flow
+const googleLoading = ref(false)
+
+const handleGoogleLogin = () => {
   if (!window.google || !gisReady.value || !codeClient) {
     ElMessage.info('Google 登入服務準備中，請稍後再試')
     return
   }
+  
+  googleLoading.value = true
+  
   try {
-    if (response.credential) {
-      console.log('收到 Google ID Token')
-
-      // 呼叫後端 Google 登入 API（直接傳 token 字串）
-      const result = await authAPI.googleLogin(response.credential)
-
-      console.log('Google 登入後端回應:', result.data)
-
-      if (result.data.access_token) {
-        // 使用 auth store 統一管理 token 和用戶資訊
-        authStore.setToken(result.data.access_token, null)
-        authStore.setUser(result.data.user)
-
-        console.log('Token 已設置:', localStorage.getItem('access_token'))
-        console.log('用戶已設置:', result.data.user)
-
-        ElMessage.success('Google 登入成功！')
-
-        // 跳轉到控制台
-        setTimeout(() => {
-          console.log('準備導航到 /dashboard')
-          router.push('/dashboard').then(() => {
-            console.log('成功導航到 /dashboard')
-          }).catch(err => {
-            console.error('導航失敗:', err)
-          })
-        }, 100)
-      } else {
-        ElMessage.error('Google 登入失敗：未收到 access token')
-      }
-    }
+    // 觸發 OAuth Code Flow
+    codeClient.requestCode()
   } catch (error) {
-    console.error('Google 登入失敗:', error)
-    ElMessage.error(
-      error.response?.data?.msg || error.response?.data?.error || 'Google 登入失敗，請稍後再試'
-    )
-  } finally {
+    console.error('Google 登入初始化失敗:', error)
+    ElMessage.error('Google 登入失敗，請稍後再試')
     googleLoading.value = false
   }
 }
