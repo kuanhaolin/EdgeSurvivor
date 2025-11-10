@@ -1,0 +1,30 @@
+flowchart TB
+  subgraph EdgeSurvivor["EdgeSurvivor 系統"]
+    UC1["(註冊 / 登入)"]
+    UC2["(瀏覽活動)"]
+    UC3["(建立 / 編輯活動)"]
+    UC4["(申請媒合)"]
+    UC5["(參加活動)"]
+    UC6["(聊天室互動)"]
+    UC7["(費用分攤)"]
+    UC8["(活動評價)"]
+    UC9["(檔案上傳)"]
+    UC10["(重設密碼 / Email 驗證)"]
+  end
+
+  U[使用者] --> UC1
+  U --> UC2
+  U --> UC3
+  U --> UC4
+  U --> UC5
+  U --> UC6
+  U --> UC7
+  U --> UC8
+  U --> UC9
+  U --> UC10
+
+  %% include 關係 (用虛線模擬)
+  UC3 -.->|<<include>> 上傳封面| UC9
+  UC5 -.->|<<include>> 申請媒合| UC4
+  UC7 -.->|<<include>> 僅限參加者| UC5
+  UC8 -.->|<<include>> 僅限參加者| UC5

@@ -1,0 +1,54 @@
+@startuml
+package "API Interface" {
+  interface ActivitiesAPI <<interface>>
+  interface ChatAPI <<interface>>
+  interface UserAPI <<interface>>
+  interface ExpenseAPI <<interface>>
+  interface ReviewAPI <<interface>>
+  interface SocketIOHandler <<interface>>
+}
+
+package "Entities" {
+  entity User <<entity>>
+  entity Activity <<entity>>
+  entity Match <<entity>>
+  entity ActivityDiscussion <<entity>>
+  entity ActivityParticipant <<entity>>
+  entity ChatMessage <<entity>>
+  entity Expense <<entity>>
+  entity ActivityReview <<entity>>
+}
+
+package "Frontend Components" {
+  class ActivitiesView
+  class ChatView
+  class ProfileView
+  class ExpenseManager
+  class ActivityReviews
+  class AppVue
+}
+
+' 關聯線集中在最後
+ActivitiesAPI ..> Activity
+ChatAPI ..> ChatMessage
+UserAPI ..> User
+ExpenseAPI ..> Expense
+ReviewAPI ..> ActivityReview
+SocketIOHandler ..> ChatMessage
+SocketIOHandler ..> ActivityDiscussion
+
+ActivitiesView ..> ActivitiesAPI : REST API
+ChatView ..> ChatAPI : REST API
+ChatView ..> SocketIOHandler : Socket.IO
+ProfileView ..> UserAPI : REST API
+ExpenseManager ..> ExpenseAPI : REST API
+ActivityReviews ..> ActivityReview : Entity
+AppVue ..> ActivitiesView
+AppVue ..> ChatView
+AppVue ..> ProfileView
+AppVue ..> ExpenseManager
+AppVue ..> ActivityReviews
+ActivitiesAPI ..> ActivityParticipant
+
+
+@enduml

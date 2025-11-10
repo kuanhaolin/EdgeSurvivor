@@ -1,0 +1,154 @@
+---
+config:
+  layout: elk
+---
+classDiagram
+direction TB
+class ActivitiesController {
+    +id
+    +title
+    +description
+    +date
+    +location
+    +creator_id
+    +get_activities()
+    +create_activity()
+    +get_activity()
+    +update_activity()
+    +delete_activity()
+    +join_activity()
+    +get_pending_participants()
+    +approve_participant()
+    +reject_participant()
+    +leave_activity()
+}
+class AuthController {
+    +id
+    +activity_id
+    +user_id
+    +name
+    +email
+    +password
+    +created_at
+    +joined_at
+    +register()
+    +login()
+    +refresh()
+    +logout()
+    +get_current_user()
+    +change_password()
+    +google_login()
+    +google_code_login()
+    +forgot_password()
+    +reset_password()
+    +setup_two_factor()
+    +verify_two_factor()
+    +disable_two_factor()
+}
+class ChatController {
+    +id
+    +activity_id
+    +sender_id
+    +content
+    +timestamp
+    +get_conversations()
+    +get_messages()
+    +send_message()
+    +mark_as_read()
+    +mark_conversation_as_read()
+    +get_unread_count()
+    +get_shared_activities()
+}
+class DiscussionController {
+    +id
+    +activity_id
+    +user_id
+    +content
+    +created_at
+    +get_discussions()
+    +post_discussion()
+    +delete_discussion()
+}
+class ExpenseController {
+    +id
+    +activity_id
+    +user_id
+    +amount
+    +description
+    +created_at
+    +get_expenses()
+    +create_expense()
+    +delete_expense()
+    +get_settlement()
+}
+class MatchController {
+    +id
+    +user_id
+    +target_user_id
+    +status
+    +created_at
+    +get_recommended_matches()
+    +get_pending_matches()
+    +get_sent_matches()
+    +get_matches()
+    +create_match()
+    +accept_match()
+    +reject_match()
+    +cancel_match()
+}
+class ReviewController {
+    +id
+    +activity_id
+    +reviewer_id
+    +reviewed_user_id
+    +score
+    +comment
+    +created_at
+    +get_activity_reviews()
+    +get_my_review_status()
+    +submit_review()
+    +update_user_review_count()
+}
+class UploadController {
+    +id
+    +file_name
+    +file_path
+    +file_type
+    +uploaded_by
+    +uploaded_at
+    +allowed_file()
+    +upload_image()
+    +upload_multiple_images()
+}
+class UserController {
+    +id
+    +name
+    +email
+    +gender
+    +age
+    +region
+    +interests
+    +avatar
+    +privacy_setting
+    +get_user_stats()
+    +get_recent_activities()
+    +get_profile()
+    +update_profile()
+    +update_privacy()
+    +get_user()
+    +upload_avatar()
+    +delete_account()
+}
+AuthController --> ActivitiesController
+AuthController --> MatchController
+AuthController --> ChatController
+AuthController --> ExpenseController
+AuthController --> ReviewController
+AuthController --> ActivitiesController
+AuthController --> DiscussionController
+ActivitiesController --> DiscussionController
+ActivitiesController --> ChatController
+ActivitiesController --> ExpenseController
+ActivitiesController --> ReviewController
+UserController --> ReviewController
+UserController --> UploadController
