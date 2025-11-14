@@ -1,0 +1,367 @@
+@startuml
+title EdgeSurvivor 活動完整生命周期（建立到結束）
+' 根據實際程式碼：activities.py, expenses.py, discussions.py, reviews.py
+
+|活動建立者|
+start
+:登入系統;
+note right: JWT 驗證通過
+:進入活動建立頁面;
+:填寫活動資訊;
+note right
+POST /api/activities
+必填欄位：
+• title (標題)
+• type/category (類型)
+• location (地點)
+• start_date (開始日期)
+• max_members (人數上限)
+可選：
+• end_date, description, cover_image
+end note
+:提交建立請求;
+
+|系統|
+:接收 POST 請求;
+:驗證必填欄位;
+if (資料完整?) then (yes)
+  :建立 Activity 記錄;
+  :寫入 activities 表;
+  :自動將建立者加入 activity_participants;
+  note right
+    ActivityParticipant:
+    • user_id = creator_id
+    • status = 'joined'
+    • role = 'creator'
+    
+    建立者也是參與者！
+  end note
+  :回傳活動資訊 (201);
+else (no)
+  ->活動建立者: 回傳錯誤訊息 (400);
+  stop
+endif
+
+|活動參與者|
+:瀏覽活動列表;
+note right: GET /api/activities
+:查看活動詳情;
+note right: GET /api/activities/{id}
+:點選「我要報名」;
+note right
+POST /api/activities/{id}/join
+可附帶申請訊息 (message)
+end note
+
+|系統|
+:接收報名請求;
+:檢查是否為建立者;
+if (是建立者本人?) then (yes)
+  ->活動參與者: 「不能報名自己的活動」(400);
+  stop
+endif
+:檢查是否已報名;
+if (已存在記錄?) then (yes)
+  ->活動參與者: 「已申請或參與」(400);
+  stop
+endif
+:檢查人數限制;
+if (人數已滿?) then (yes)
+  ->活動參與者: 「活動人數已滿」(400);
+  stop
+endif
+:建立 ActivityParticipant 記錄;
+note right
+• status = 'pending' (待審核)
+• role = 'participant'
+• message = 申請訊息
+end note
+:回傳「申請已送出」(200);
+
+|活動建立者|
+:收到新申請通知;
+:查看待審核列表;
+note right
+GET /api/activities/{id}/participants/pending
+只有建立者可查看
+顯示 status='pending' 的申請
+end note
+:審核申請者資料;
+
+if (決定同意?) then (yes)
+  :點選「同意」;
+  note right
+    POST /api/activities/{id}/
+    participants/{pid}/approve
+  end note
+  
+  |系統|
+  :驗證建立者權限;
+  :檢查活動人數;
+  if (未超過上限?) then (yes)
+    :更新參與者狀態;
+    note right
+      • status = 'approved'
+      • approved_at = 當前時間
+      呼叫 participant.approve()
+    end note
+    :回傳成功 (200);
+    ->活動參與者: 發送核准通知;
+  else (no)
+    ->活動建立者: 「人數已滿」(400);
+  endif
+  
+else (no)
+  :點選「拒絕」;
+  note right
+    POST /api/activities/{id}/
+    participants/{pid}/reject
+    可附帶 rejection_reason
+  end note
+  
+  |系統|
+  :更新參與者狀態;
+  note right
+    • status = 'rejected'
+    • rejection_reason = 原因
+    呼叫 participant.reject()
+  end note
+  :回傳成功 (200);
+  ->活動參與者: 發送拒絕通知;
+  stop
+endif
+
+|活動參與者|
+:收到核准通知;
+:正式成為活動成員;
+note right: status = 'approved'
+
+' ===== 活動進行階段 =====
+|系統|
+floating note left: 活動進行階段（活動日期內）
+
+|活動建立者|
+fork
+  :參與討論區互動;
+  note right
+    POST /api/activities/{id}/discussions
+    建立者也可以發送訊息
+    因為建立者也是參與者
+  end note
+  
+  |系統|
+  :檢查是否為參與者;
+  note right
+    is_user_participant() 或
+    creator_id == current_user
+  end note
+  :儲存討論訊息;
+  :回傳訊息內容 (201);
+  
+fork again
+  |活動建立者|
+  :新增共同費用;
+  note right
+    POST /api/activities/{id}/expenses
+    建立者可以新增費用
+  end note
+  
+  |系統|
+  :建立 Expense 記錄;
+  note right
+    • payer_id = current_user
+    • amount, description
+    • participants (預設全員)
+    • split_method = 'equal'
+  end note
+  :計算分攤金額;
+  :回傳費用資訊 (201);
+  
+fork again
+  |活動建立者|
+  :查看費用明細;
+  note right
+    GET /api/activities/{id}/expenses
+    顯示總額、人數、每人應付
+  end note
+  
+fork again
+  |活動建立者|
+  :管理活動;
+  note right
+    PUT /api/activities/{id}
+    只有建立者可以更新活動資訊
+  end note
+  
+  |系統|
+  :驗證建立者權限;
+  if (是建立者?) then (yes)
+    :更新活動資訊;
+    :回傳成功 (200);
+  else (no)
+    ->活動建立者: 「無權限」(403);
+  endif
+  
+fork again
+  |活動建立者|
+  if (需要移除參與者?) then (yes)
+    :移除參與者;
+    note right
+      可更新 status 或刪除記錄
+    end note
+  endif
+end fork
+
+|活動參與者|
+fork
+  :參與討論區互動;
+  note right
+    POST /api/activities/{id}/discussions
+    只有參與者可以發送訊息
+  end note
+  
+  |系統|
+  :檢查參與者權限;
+  :儲存討論訊息;
+  :回傳訊息內容 (201);
+  
+fork again
+  |活動參與者|
+  :新增共同費用;
+  note right
+    POST /api/activities/{id}/expenses
+    所有參與者都可新增費用
+  end note
+  
+  |系統|
+  :建立 Expense 記錄;
+  :計算分攤金額;
+  :回傳費用資訊 (201);
+  
+fork again
+  |活動參與者|
+  :查看費用明細;
+  note right
+    GET /api/activities/{id}/expenses
+  end note
+  
+fork again
+  |活動參與者|
+  if (想離開活動?) then (yes)
+    :點選「離開活動」;
+    note right
+      POST /api/activities/{id}/leave
+      建立者不能離開，只能刪除活動
+    end note
+    
+    |系統|
+    :檢查是否為建立者;
+    if (是建立者?) then (yes)
+      ->活動參與者: 「建立者不能離開」(400);
+    else (no)
+      :更新 status = 'left';
+      :設定 left_at 時間;
+      :回傳成功 (200);
+    endif
+  endif
+end fork
+
+' ===== 活動結束階段 =====
+|系統|
+floating note left: 活動結束階段
+
+:活動結束日期到達;
+:更新活動狀態;
+
+|活動建立者|
+:查看最終費用結算;
+note right
+GET /api/activities/{id}/expenses
+總額、人數、每人應付金額
+end note
+
+|活動參與者|
+:查看最終費用結算;
+if (需要補繳?) then (yes)
+  :完成付款;
+endif
+
+' ===== 評價階段 =====
+|系統|
+floating note left: 評價階段
+
+:開放評價功能;
+note right: 活動結束後
+
+|活動參與者|
+:查看可評價對象;
+note right
+GET /api/activities/{id}/reviews/my-status
+返回：
+• reviewed: 已評價的人
+• pending: 待評價的人
+不包括自己
+包含建立者（如果不是自己）
+end note
+
+:對其他參與者評價;
+note right
+POST /api/activities/{id}/reviews
+• reviewee_id (被評價者 ID)
+• comment (評價內容)
+• anonymous (是否匿名)
+可以評價建立者
+end note
+
+|系統|
+:驗證參與者身份;
+:儲存 ActivityReview;
+:更新被評價者信譽分數;
+:回傳成功 (201);
+
+|活動建立者|
+:查看自己收到的評價;
+note right
+建立者也可以被評價
+因為建立者也是參與者
+end note
+
+:對參與者進行評價;
+note right
+POST /api/activities/{id}/reviews
+建立者也可以評價其他人
+end note
+
+|系統|
+:儲存建立者的評價;
+
+|活動建立者|
+:查看所有評價;
+note right
+GET /api/activities/{id}/reviews
+建立者可以查看活動的所有評價
+end note
+
+:查看活動統計報告;
+note right
+• 參與人數
+• 總費用金額
+• 評價數量與內容
+• 活動完成狀態
+end note
+
+|系統|
+:保存完整活動記錄;
+note right
+• 活動資料
+• 參與者記錄
+• 討論訊息
+• 費用明細
+• 評價內容
+end note
+
+:活動生命周期結束;
+
+stop
+
+@enduml
