@@ -1,0 +1,37 @@
+@startuml
+title Google OAuth登入
+|使用者|
+start
+:打開登入頁面;
+if (是否選擇Google OAuth登入？) then (否)
+  :選擇其他登入方式;
+else (是)
+  |系統|
+  :重定向到 Google 授權頁面;
+  |Google API|
+  :顯示授權頁面;
+  |使用者|
+  :授權應用程式;
+  |Google API|
+  :返回授權碼;
+  |系統|
+  :使用授權碼請求存取令牌;
+  :使用存取令牌請求用戶資料;
+  |Google API|
+  :返回用戶資料;
+  |系統|
+  if (驗證成功？) then (是)
+    :儲存資料;
+    :返回成功回應;
+  else (否)
+    :返回失敗回應;
+  endif
+  |使用者|
+  if (登入成功？) then (是)
+    :進入系統;
+  else (否)
+    :重新嘗試;
+  endif
+endif
+stop
+@enduml

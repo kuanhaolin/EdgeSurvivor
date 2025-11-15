@@ -1,0 +1,34 @@
+@startuml
+title Email登入
+|使用者|
+start
+:打開登入頁面;
+if (選擇 Email 登入？) then (否)
+  |使用者|
+  :選擇其他登入方式;
+else (是)
+  :輸入電子郵件和密碼;
+  |系統|
+  if (驗證成功？) then (是)
+    :發送 2FA 驗證碼;
+    |使用者|
+    :輸入 2FA 驗證碼;
+    |系統|
+    if (2FA 驗證成功？) then (是)
+      :生成 JWT Token;
+      :返回登入成功回應;
+    else (否)
+      :返回 2FA 錯誤訊息;
+    endif
+  else (否)
+    :返回錯誤訊息;
+  endif
+  |使用者|
+  if (登入成功？) then (是)
+    :進入系統;
+  else (否)
+    :重新嘗試;
+  endif
+endif
+stop
+@enduml

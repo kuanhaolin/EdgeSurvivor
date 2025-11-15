@@ -1,0 +1,20 @@
+@startuml
+title 註冊
+|使用者|
+start
+:打開註冊頁面;
+:填寫註冊表單;
+|系統|
+if (驗證成功？) then (是)
+  :儲存用戶資料;
+else (否)
+  :返回驗證錯誤;
+endif
+|使用者|
+if (註冊成功？) then (是)
+  :完成註冊;
+else (否)
+  :重新嘗試;
+endif
+stop
+@enduml
