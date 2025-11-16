@@ -1,0 +1,43 @@
+@startuml
+title EdgeSurvivor 部署架構圖
+
+actor "使用者" as user
+
+node "伺服器" {
+
+  component "Nginx\n(Reverse Proxy / SSL)" as nginx
+
+  node "Docker Engine" {
+
+    node "Edgesurvivor Frontend Container" as frontend {
+      component "Vue.js Static Files" as vue
+    }
+
+    node "Edgesurvivor Backend Container" as backend {
+      component "Flask Application" as flask
+      component "Socket.IO Service" as socketio
+      component "Flask-JWT-Extended" as jwt
+    }
+
+    node "Edgesurvivor DB Container" as database {
+      database "MariaDB" as mariadb
+    }
+  }
+}
+
+cloud "<<external>> Google OAuth 2.0" as google
+cloud "<<external>> Gmail Service" as email
+
+user --> nginx : HTTPS/443
+
+nginx --> frontend : HTTP/80
+nginx --> backend : HTTP/8080
+
+frontend --> backend : REST API/HTTP
+frontend --> backend : WebSocket/WSS
+
+backend --> mariadb : TCP/3306
+backend --> google : HTTPS/443
+backend --> email : SMTP/TLS:587
+
+@enduml
