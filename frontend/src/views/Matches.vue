@@ -93,7 +93,7 @@
       </el-card>
       
       <!-- 交友列表標籤頁 -->
-      <el-tabs v-model="activeTab" class="matches-tabs" v-loading="loading" element-loading-text="載入旅伴中...">
+      <el-tabs v-model="activeTab" class="matches-tabs">
         <!-- 推薦交友 -->
         <el-tab-pane label="推薦交友" name="recommended">
           <el-row :gutter="20">
@@ -419,7 +419,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -434,9 +434,6 @@ import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
 
 const router = useRouter()
-
-// Loading 狀態
-const loading = ref(false)
 
 const activeTab = ref('recommended')
 
