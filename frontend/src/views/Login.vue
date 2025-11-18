@@ -290,8 +290,10 @@ const goToHome = () => {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  min-height: -webkit-fill-available; /* iOS Safari 修復 */
   background: var(--gradient-primary);
   padding: var(--spacing-lg);
+  padding-bottom: calc(var(--spacing-lg) + env(safe-area-inset-bottom)); /* iOS 安全區域 */
   position: relative;
   overflow: hidden;
 }

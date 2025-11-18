@@ -343,6 +343,51 @@
 }
 
 /* ===================================
+   iOS Safari 優化
+   =================================== */
+
+/* 防止 iOS Safari 自動縮放 */
+input,
+textarea,
+select {
+  font-size: 16px !important;
+}
+
+/* 修復 iOS Safari 固定定位問題 */
+body {
+  position: relative;
+  min-height: 100vh;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 修復 iOS Safari 點擊延遲 */
+a,
+button,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  -webkit-touch-callout: none;
+}
+
+/* 防止 iOS Safari 橡皮筋效果影響固定元素 */
+html {
+  overflow: hidden;
+  height: 100%;
+}
+
+body {
+  overflow: auto;
+  height: 100%;
+}
+
+/* 修復 iOS Safari 100vh 問題 */
+.full-height {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+/* ===================================
    滾動條美化
    =================================== */
 

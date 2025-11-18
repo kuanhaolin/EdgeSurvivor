@@ -297,6 +297,7 @@ const backToLogin = () => {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  min-height: -webkit-fill-available;
   background: var(--gradient-primary);
   padding: var(--spacing-lg);
   position: relative;

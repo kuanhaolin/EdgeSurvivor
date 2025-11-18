@@ -54,6 +54,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-size: 16px;
   line-height: 1.6;
+  /* iOS Safari 優化 */
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* App 容器 */
@@ -151,6 +154,9 @@ body {
   border-radius: var(--radius-md) !important;
   font-weight: 500 !important;
   transition: all var(--transition-fast) !important;
+  /* iOS 觸控優化 */
+  -webkit-tap-highlight-color: transparent !important;
+  touch-action: manipulation !important;
 }
 
 .el-button--primary {
@@ -180,6 +186,11 @@ body {
 
 .el-input__wrapper.is-focus {
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+}
+
+/* iOS 輸入框優化 - 防止自動縮放 */
+.el-input__inner {
+  font-size: 16px !important;
 }
 
 /* 對話框美化 */

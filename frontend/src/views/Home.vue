@@ -334,6 +334,7 @@ const scrollToFeatures = () => {
 <style scoped>
 .home {
   min-height: 100vh;
+  min-height: -webkit-fill-available; /* iOS Safari 修復 */
   background: var(--bg-primary);
   overflow-x: hidden;
 }
@@ -341,11 +342,13 @@ const scrollToFeatures = () => {
 /* ==================== Hero 區域 ==================== */
 .hero-section {
   min-height: 100vh;
+  min-height: -webkit-fill-available; /* iOS Safari 修復 */
   background: var(--gradient-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--spacing-2xl) var(--spacing-xl);
+  padding-bottom: calc(var(--spacing-2xl) + env(safe-area-inset-bottom)); /* iOS 安全區域 */
   position: relative;
   overflow: hidden;
 }
@@ -437,6 +440,9 @@ const scrollToFeatures = () => {
   color: var(--primary-color) !important;
   border: none !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+  /* iOS 觸控優化 */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .primary-btn:hover {

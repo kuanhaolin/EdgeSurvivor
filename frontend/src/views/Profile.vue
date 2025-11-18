@@ -1476,6 +1476,7 @@ const deleteAccount = async () => {
 <style scoped>
 .profile {
   min-height: 100vh;
+  min-height: -webkit-fill-available;
   background-color: #f5f7fa;
 }
 

@@ -548,6 +548,7 @@ onMounted(() => {
 <style scoped>
 .activity-detail {
   min-height: 100vh;
+  min-height: -webkit-fill-available;
   background-color: #f5f7fa;
 }
 
