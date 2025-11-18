@@ -57,16 +57,17 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { UserFilled, ArrowDown } from '@element-plus/icons-vue'
 import axios from '@/utils/axios'
 import socketService from '@/services/socket'
-import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const authStore = useAuthStore()
 
 // 未讀訊息數量
 const unreadCount = ref(0)
 
-// 從 auth store 獲取用戶信息
-const user = computed(() => authStore.user)
+// 獲取用戶信息
+const user = computed(() => {
+  const userStr = localStorage.getItem('user')
+  return userStr ? JSON.parse(userStr) : null
+})
 
 // 用戶名顯示邏輯
 const userName = computed(() => {
@@ -103,22 +104,20 @@ const logout = async () => {
       }
     )
     
-    console.log('開始登出...')
-    
     // 斷開 Socket.IO 連線
     socketService.disconnect()
     
-    // 使用 auth store 的 logout 方法統一處理
-    await authStore.logout()
+    // 清除本地存儲的 token 和用戶資料
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
     
-    console.log('登出完成，已清除所有狀態')
+    ElMessage.success('登出成功')
+    
+    // 跳轉到登入頁面
+    router.push('/login')
   } catch (error) {
     // 用戶取消登出
-    if (error !== 'cancel') {
-      console.error('登出錯誤:', error)
-    } else {
-      console.log('用戶取消登出')
-    }
+    console.log('用戶取消登出')
   }
 }
 

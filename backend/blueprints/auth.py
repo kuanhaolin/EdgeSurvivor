@@ -30,7 +30,7 @@ def validate_password(password):
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    """使用者註冊 - Rate limit: 3 per hour"""
+    """使用者註冊"""
     try:
         data = request.get_json()
         
@@ -72,13 +72,6 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        # 發送歡迎郵件 (可選，失敗不影響註冊)
-        try:
-            send_welcome_email(email, name)
-        except Exception as email_error:
-            print(f"發送歡迎郵件失敗: {email_error}")
-            # 不中斷註冊流程
-        
         # 建立 JWT Token - 使用字串格式的 user_id
         access_token = create_access_token(identity=str(user.user_id))
         refresh_token = create_refresh_token(identity=str(user.user_id))
@@ -96,7 +89,7 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    """使用者登入 - Rate limit: 5 per minute"""
+    """使用者登入"""
     try:
         data = request.get_json()
         
@@ -364,7 +357,7 @@ def google_code_login():
 
 @auth_bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
-    """發送重設密碼驗證碼 - Rate limit: 3 per hour"""
+    """發送重設密碼驗證碼"""
     try:
         data = request.get_json()
         email = data.get('email')

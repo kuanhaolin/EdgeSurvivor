@@ -44,36 +44,18 @@ export const useAuthStore = defineStore('auth', () => {
       isLoading.value = true
       const response = await api.login(credentials)
       
-      console.log('登入回應:', response.data)
-      
-      // 檢查是否需要兩步驟驗證
-      if (response.data.require_2fa) {
-        return response.data
-      }
-      
       if (response.data.access_token) {
         setToken(response.data.access_token, response.data.refresh_token)
         setUser(response.data.user)
         
-        console.log('Token 已設置:', localStorage.getItem('access_token'))
-        console.log('用戶已設置:', user.value)
-        
         ElMessage.success('登入成功！')
         
-        // 使用 setTimeout 確保狀態更新後再導航
-        setTimeout(() => {
-          console.log('準備導航到 /dashboard')
-          router.push('/dashboard').then(() => {
-            console.log('成功導航到 /dashboard')
-          }).catch(err => {
-            console.error('導航失敗:', err)
-          })
-        }, 100)
+        // 重定向到控制台
+        router.push('/dashboard')
         
         return response.data
       }
     } catch (error) {
-      console.error('登入錯誤:', error)
       const message = error.response?.data?.error || '登入失敗，請稍後再試'
       ElMessage.error(message)
       throw error
@@ -119,14 +101,10 @@ export const useAuthStore = defineStore('auth', () => {
       setToken(null, null)
       setUser(null)
       
-      console.log('已清除所有認證狀態')
-      console.log('localStorage access_token:', localStorage.getItem('access_token'))
-      console.log('localStorage refresh_token:', localStorage.getItem('refresh_token'))
+      ElMessage.info('已登出')
       
-      ElMessage.success('登出成功')
-      
-      // 重定向到登入頁面
-      router.push('/login')
+      // 重定向到首頁
+      router.push('/')
     }
   }
 

@@ -19,7 +19,7 @@
       <!-- 統計卡片 -->
       <el-row :gutter="20" class="stats-row">
         <el-col :xs="24" :sm="12" :md="6">
-          <el-card class="stat-card clickable" @click="goToActivities">
+          <el-card class="stat-card">
             <el-statistic title="我的活動" :value="stats.activities">
               <template #prefix>
                 <el-icon><Calendar /></el-icon>
@@ -29,7 +29,7 @@
         </el-col>
         
         <el-col :xs="24" :sm="12" :md="6">
-          <el-card class="stat-card clickable" @click="goToMatches">
+          <el-card class="stat-card">
             <el-statistic title="好友數量" :value="stats.matches">
               <template #prefix>
                 <el-icon><UserFilled /></el-icon>
@@ -39,7 +39,7 @@
         </el-col>
         
         <el-col :xs="24" :sm="12" :md="6">
-          <el-card class="stat-card clickable" @click="goToChat">
+          <el-card class="stat-card">
             <el-statistic title="未讀訊息" :value="stats.unreadMessages">
               <template #prefix>
                 <el-icon><ChatDotRound /></el-icon>
@@ -49,7 +49,7 @@
         </el-col>
         
         <el-col :xs="24" :sm="12" :md="6">
-          <el-card class="stat-card clickable" @click="goToActivities">
+          <el-card class="stat-card">
             <el-statistic title="評價次數" :value="stats.reviews">
               <template #prefix>
                 <el-icon><Star /></el-icon>
@@ -162,13 +162,11 @@ import {
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
 import socketService from '@/services/socket'
-import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const authStore = useAuthStore()
 
-// 從 auth store 獲取用戶資訊
-const user = computed(() => authStore.user)
+// 用戶資訊
+const user = ref(null)
 const userName = computed(() => {
   if (!user.value) return '旅行者'
   // 優先使用 name，如果沒有則使用 email 的前半部分
@@ -212,34 +210,10 @@ const recentActivities = ref([])
 const recentMatches = ref([])
 
 // 載入用戶資訊
-onMounted(async () => {
-  console.log('Dashboard 載入')
-  console.log('當前用戶:', user.value)
-  console.log('Token:', authStore.token)
-  
-  // 如果沒有用戶資訊但有 token，從後端獲取
-  if (!user.value && authStore.token) {
-    try {
-      console.log('嘗試從後端獲取用戶資訊...')
-      await authStore.fetchCurrentUser()
-      console.log('成功獲取用戶資訊:', authStore.user)
-    } catch (error) {
-      console.error('獲取用戶資訊失敗:', error)
-      // 401 錯誤表示 token 無效，auth store 已經處理了跳轉
-      if (error.response?.status !== 401) {
-        ElMessage.error('無法獲取用戶資訊，請重新登入')
-        router.push('/login')
-      }
-      return
-    }
-  }
-  
-  // 如果既沒有用戶資訊也沒有 token，路由守衛應該會攔截
-  // 這裡是備用檢查
-  if (!user.value) {
-    console.warn('沒有用戶資訊，跳轉到登入頁')
-    router.push('/login')
-    return
+onMounted(() => {
+  const userStr = localStorage.getItem('user')
+  if (userStr) {
+    user.value = JSON.parse(userStr)
   }
   
   // 從 API 載入實際數據
@@ -386,27 +360,6 @@ const goToProfile = () => {
 .stat-card {
   margin-bottom: 20px;
   text-align: center;
-  transition: all 0.3s ease;
-}
-
-.stat-card.clickable {
-  cursor: pointer;
-  user-select: none;
-}
-
-.stat-card.clickable:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
-  border-color: #667eea;
-}
-
-.stat-card.clickable:active {
-  transform: translateY(-4px);
-}
-
-/* 確保卡片內部元素不會阻擋點擊事件 */
-.stat-card.clickable :deep(.el-card__body) {
-  pointer-events: none;
 }
 
 .stat-card :deep(.el-statistic__head) {
@@ -417,11 +370,6 @@ const goToProfile = () => {
 .stat-card :deep(.el-statistic__content) {
   font-size: 28px;
   font-weight: bold;
-  transition: color 0.3s ease;
-}
-
-.stat-card.clickable:hover :deep(.el-statistic__content) {
-  color: #667eea;
 }
 
 .quick-actions {

@@ -20,6 +20,7 @@
               v-model="searchQuery"
               placeholder="搜尋活動名稱或地點"
               clearable
+              @input="handleSearch"
             >
               <template #prefix>
                 <el-icon><Search /></el-icon>
@@ -705,6 +706,12 @@ const getTypeText = (type) => {
     other: '其他'
   }
   return types[type] || type
+}
+
+// 搜尋處理
+const handleSearch = () => {
+  // TODO: 實作搜尋邏輯
+  console.log('搜尋:', searchQuery.value)
 }
 
 // 返回

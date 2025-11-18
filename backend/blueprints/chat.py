@@ -248,7 +248,7 @@ def mark_conversation_as_read(user_id):
 @chat_bp.route('/unread-count', methods=['GET'])
 @jwt_required()
 def get_unread_count():
-    """獲取總未讀訊息數（高頻率 API，不限制）"""
+    """獲取總未讀訊息數"""
     try:
         current_user_id = int(get_jwt_identity())
         

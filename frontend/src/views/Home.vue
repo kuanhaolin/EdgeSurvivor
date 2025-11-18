@@ -319,23 +319,11 @@ const testimonials = [
 ]
 
 const goToLogin = () => {
-  console.log('點擊了立即開始冒險按鈕')
-  console.log('準備導航到 /login')
-  router.push('/login').then(() => {
-    console.log('成功導航到 /login')
-  }).catch(err => {
-    console.error('導航失敗:', err)
-  })
+  router.push('/login')
 }
 
 const goToRegister = () => {
-  console.log('點擊了註冊按鈕')
-  console.log('準備導航到 /register')
-  router.push('/register').then(() => {
-    console.log('成功導航到 /register')
-  }).catch(err => {
-    console.error('導航失敗:', err)
-  })
+  router.push('/register')
 }
 
 const scrollToFeatures = () => {

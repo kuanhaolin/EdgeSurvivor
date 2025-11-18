@@ -78,18 +78,7 @@
 
         <!-- 可見的 Google 官方按鈕（備援；當 One Tap 無法顯示時請點這個） -->
         <el-form-item>
-          <el-button
-            style="width: 100%"
-            :loading="googleLoading"
-            @click="handleGoogleLogin"
-            class="google-login-btn"
-          >
-            <svg v-if="!googleLoading" class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
+          <el-button style="width: 100%" @click="handleGoogleCodeLogin">
             使用 Google 登入
           </el-button>
         </el-form-item>
@@ -114,11 +103,10 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, ArrowLeft } from '@element-plus/icons-vue'
-import { useAuthStore } from '@/stores/auth'
+import axios from 'axios'
 import authAPI from '../api/auth'
 
 const router = useRouter()
-const authStore = useAuthStore()
 const loginFormRef = ref(null)
 const loading = ref(false)
 const gisReady = ref(false)
@@ -135,19 +123,19 @@ const loginForm = reactive({
 
 const rules = {
   username: [
-    { required: true, message: '請輸入帳號或電子郵件', trigger: 'blur' },
-    { type: 'email', message: 'Email 格式不正確', trigger: 'blur' }
+    { required: true, message: '請輸入帳號或電子郵件', trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '請輸入密碼', trigger: 'blur' }
+    { required: true, message: '請輸入密碼', trigger: 'blur' },
+    { min: 6, message: '密碼長度至少 6 個字元', trigger: 'blur' }
   ],
   twoFactorCode: [
     { 
       validator: (rule, value, callback) => {
         if (require2FA.value && !value) {
           callback(new Error('請輸入驗證碼'))
-        } else if (require2FA.value && value && !/^\d{6}$/.test(value)) {
-          callback(new Error('驗證碼必須為 6 位數字'))
+        } else if (require2FA.value && value.length !== 6) {
+          callback(new Error('驗證碼必須為 6 位數'))
         } else {
           callback()
         }
@@ -160,48 +148,51 @@ const rules = {
 const handleLogin = async () => {
   if (!loginFormRef.value) return
   
-  try {
-    // 驗證表單
-    const valid = await loginFormRef.value.validate()
-    if (!valid) {
-      return
+  await loginFormRef.value.validate(async (valid) => {
+    if (valid) {
+      loading.value = true
+      try {
+        const loginData = {
+          email: loginForm.username,
+          password: loginForm.password
+        }
+        
+        // 如果需要兩步驟驗證，加入驗證碼
+        if (require2FA.value && loginForm.twoFactorCode) {
+          loginData.two_factor_code = loginForm.twoFactorCode
+        }
+        
+        const response = await axios.post('/api/auth/login', loginData)
+        
+        // 檢查是否需要兩步驟驗證
+        if (response.data.require_2fa) {
+          require2FA.value = true
+          ElMessage.info('請輸入兩步驟驗證碼')
+          return
+        }
+        
+        if (response.data.access_token) {
+          // 儲存 token
+          localStorage.setItem('token', response.data.access_token)
+          localStorage.setItem('user', JSON.stringify(response.data.user))
+          
+          ElMessage.success('登入成功！')
+          
+          // 跳轉到控制台
+          setTimeout(() => {
+            router.push('/dashboard')
+          }, 500)
+        }
+      } catch (error) {
+        console.error('登入失敗:', error)
+        ElMessage.error(
+          error.response?.data?.error || '登入失敗，請檢查帳號密碼'
+        )
+      } finally {
+        loading.value = false
+      }
     }
-
-    loading.value = true
-
-    // 準備登入憑證
-    const credentials = {
-      email: loginForm.username.trim().toLowerCase(),
-      password: loginForm.password
-    }
-
-    // 如果需要兩步驟驗證，加入驗證碼
-    if (require2FA.value && loginForm.twoFactorCode) {
-      credentials.two_factor_code = loginForm.twoFactorCode
-    }
-
-    // 調用 auth store 的 login action
-    const result = await authStore.login(credentials)
-
-    // 檢查是否需要兩步驟驗證
-    if (result && result.require_2fa) {
-      require2FA.value = true
-      ElMessage.info('請輸入兩步驟驗證碼')
-      return
-    }
-
-    // 登入成功（成功訊息和跳轉已由 store 處理）
-  } catch (error) {
-    console.error('登入失敗:', error)
-    
-    // 特定錯誤訊息已由 store 處理
-    // 這裡處理未預期的錯誤
-    if (!error.response) {
-      ElMessage.error('網路連線失敗，請檢查您的網路')
-    }
-  } finally {
-    loading.value = false
-  }
+  })
 }
 
 // Google 登入功能
@@ -213,24 +204,17 @@ console.log('GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID)
 
 // 移除 One Tap 觸發流程，改用 Code Flow 的自訂按鈕
 
-// 自訂按鈕：使用 OAuth Code Flow
-const googleLoading = ref(false)
-
-const handleGoogleLogin = () => {
+// 自訂按鈕：使用 OAuth Code Flow 以確保「使用者手勢」且可自訂外觀
+const handleGoogleCodeLogin = () => {
   if (!window.google || !gisReady.value || !codeClient) {
     ElMessage.info('Google 登入服務準備中，請稍後再試')
     return
   }
-  
-  googleLoading.value = true
-  
   try {
-    // 觸發 OAuth Code Flow
     codeClient.requestCode()
-  } catch (error) {
-    console.error('Google 登入初始化失敗:', error)
-    ElMessage.error('Google 登入失敗，請稍後再試')
-    googleLoading.value = false
+  } catch (e) {
+    console.error('請求 Google 授權碼失敗:', e)
+    ElMessage.error('無法啟動 Google 授權流程，請稍後再試')
   }
 }
 
@@ -483,39 +467,7 @@ const goToHome = () => {
   transform: translateY(-2px);
 }
 
-/* Google 登入按鈕樣式 */
-.google-login-btn {
-  height: 48px;
-  font-size: 16px;
-  font-weight: 500;
-  background: white !important;
-  border: 1px solid #dadce0 !important;
-  color: #3c4043 !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  transition: all var(--transition-base);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-}
-
-.google-login-btn:hover {
-  background: #f8f9fa !important;
-  border-color: #d2d3d4 !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-}
-
-.google-login-btn:active {
-  background: #f1f3f4 !important;
-  transform: translateY(0);
-}
-
-.google-icon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
+/*（已移除 One Tap 客製按鈕樣式）*/
 
 /* 測試帳號區域 */
 .test-accounts {

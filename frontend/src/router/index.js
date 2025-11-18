@@ -35,9 +35,7 @@ const routes = [
     name: 'Register',
     component: Register,
     meta: {
-      title: '註冊 - EdgeSurvivor',
-      requiresAuth: false,
-      layout: 'auth'
+      title: '註冊 - EdgeSurvivor'
     }
   },
   {
@@ -120,24 +118,15 @@ const router = createRouter({
 
 // 路由守衛 - 檢查認證
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('access_token')
-  
-  console.log('路由守衛觸發:')
-  console.log('  從:', from.path)
-  console.log('  到:', to.path)
-  console.log('  Token:', token ? '存在' : '不存在')
-  console.log('  需要認證:', to.meta.requiresAuth)
+  const token = localStorage.getItem('token')
   
   if (to.meta.requiresAuth && !token) {
     // 需要認證但沒有 token，跳轉到登入頁
-    console.log('  ❌ 需要認證但沒有 token，跳轉到登入頁')
     next('/login')
-  } else if ((to.path === '/login' || to.path === '/register') && token) {
-    // 已登入用戶訪問登入頁或註冊頁，跳轉到控制台
-    console.log('  ℹ️ 已登入用戶訪問登入/註冊頁，跳轉到控制台')
+  } else if (to.path === '/login' && token) {
+    // 已登入用戶訪問登入頁，跳轉到控制台
     next('/dashboard')
   } else {
-    console.log('  ✅ 允許訪問')
     next()
   }
 })
