@@ -327,18 +327,37 @@ const goToProfile = () => {
 <style scoped>
 .dashboard {
   min-height: 100vh;
-  min-height: -webkit-fill-available;
+  min-height: -webkit-fill-available; /* iOS Safari 修復 */
+  display: flex;
+  flex-direction: column;
   background-color: #f5f7fa;
+  width: 100%;
+  position: relative;
 }
 
 .dashboard-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom)); /* iOS 安全區域 */
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden; /* 防止橫向滾動 */
+  position: relative;
+  z-index: 1;
+  /* iOS 強制可見性 */
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
 }
 
 .welcome-card {
   margin-bottom: 20px;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
 }
 
 .card-header {
@@ -361,6 +380,8 @@ const goToProfile = () => {
 .stat-card {
   margin-bottom: 20px;
   text-align: center;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .stat-card :deep(.el-statistic__head) {
@@ -420,10 +441,32 @@ const goToProfile = () => {
 @media (max-width: 768px) {
   .dashboard-container {
     padding: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
   }
   
   .action-btn {
     font-size: 14px;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  .stats-row .el-col {
+    margin-bottom: 10px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  /* iOS 優化 */
+  .el-card {
+    overflow: hidden;
+  }
+  
+  .quick-actions .el-row .el-col {
+    margin-bottom: 10px;
   }
 }
 </style>

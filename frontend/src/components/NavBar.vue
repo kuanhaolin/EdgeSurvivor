@@ -105,7 +105,11 @@ const logout = async () => {
     )
     
     // 斷開 Socket.IO 連線
-    socketService.disconnect()
+    try {
+      socketService.disconnect()
+    } catch (error) {
+      console.warn('Socket 斷線失敗:', error)
+    }
     
     // 清除本地存儲的 token 和用戶資料
     localStorage.removeItem('token')
@@ -135,27 +139,35 @@ const loadUnreadCount = async () => {
 
 // 監聽新訊息事件
 const setupMessageListener = () => {
-  socketService.onNewMessage((message) => {
-    // 如果不是我發送的訊息，增加未讀數
-    const currentUserId = user.value?.user_id
-    if (message.sender_id !== currentUserId) {
-      unreadCount.value++
-      
-      // 顯示桌面通知 (如果已授權)
-      if (Notification.permission === 'granted') {
-        new Notification('新訊息', {
-          body: message.content,
-          icon: message.sender_avatar || '/logo.png'
-        })
+  try {
+    socketService.onNewMessage((message) => {
+      // 如果不是我發送的訊息，增加未讀數
+      const currentUserId = user.value?.user_id
+      if (message.sender_id !== currentUserId) {
+        unreadCount.value++
+        
+        // 顯示桌面通知 (如果已授權且支援)
+        try {
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            new Notification('新訊息', {
+              body: message.content,
+              icon: message.sender_avatar || '/logo.png'
+            })
+          }
+        } catch (error) {
+          console.warn('通知顯示失敗:', error)
+        }
       }
-    }
-  })
-  
-  // 監聽訊息已讀事件
-  socketService.onMessagesRead(() => {
-    // 重新載入未讀數
-    loadUnreadCount()
-  })
+    })
+    
+    // 監聽訊息已讀事件
+    socketService.onMessagesRead(() => {
+      // 重新載入未讀數
+      loadUnreadCount()
+    })
+  } catch (error) {
+    console.warn('設置訊息監聽失敗:', error)
+  }
 }
 
 // 組件掛載時
@@ -163,15 +175,24 @@ onMounted(() => {
   // 載入未讀數
   loadUnreadCount()
   
-  // 連線 Socket.IO 並設置監聽
-  if (!socketService.isConnected()) {
-    socketService.connect()
+  // 使用 try-catch 包裝 Socket.IO 連線，避免 iOS 初始化失敗
+  try {
+    if (!socketService.isConnected()) {
+      socketService.connect()
+    }
+    setupMessageListener()
+  } catch (error) {
+    console.warn('Socket.IO 連線失敗 (可能是 iOS):', error)
+    // 即使 Socket 失敗，NavBar 也要正常顯示
   }
-  setupMessageListener()
   
-  // 請求桌面通知權限
-  if (Notification.permission === 'default') {
-    Notification.requestPermission()
+  // 請求桌面通知權限 - iOS Safari 不支援，需要檢查
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  } catch (error) {
+    console.warn('通知權限不支援:', error)
   }
   
   // 每30秒刷新一次未讀數
@@ -191,6 +212,7 @@ onMounted(() => {
   width: 100%;
   height: 70px;
   padding: 0 var(--spacing-xl);
+  padding-top: env(safe-area-inset-top); /* iOS 安全區域 */
   background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -198,8 +220,13 @@ onMounted(() => {
   box-shadow: var(--shadow-sm);
   position: sticky;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: var(--z-sticky);
   transition: all var(--transition-base);
+  /* iOS 修復 */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .navbar-brand {
@@ -350,25 +377,37 @@ onMounted(() => {
 @media (max-width: 768px) {
   .navbar {
     height: 60px;
+    min-height: calc(60px + env(safe-area-inset-top)); /* iOS 安全區域 */
     padding: 0 var(--spacing-sm);
+    padding-top: env(safe-area-inset-top);
+    flex-wrap: nowrap;
   }
   
   .navbar-brand .logo {
-    font-size: 18px;
+    font-size: 16px;
   }
   
   .navbar-menu .el-menu-item {
-    font-size: 13px;
-    padding: 0 var(--spacing-sm) !important;
-    margin: 0 2px;
+    font-size: 12px;
+    padding: 0 8px !important;
+    margin: 0 1px;
+    min-width: auto;
   }
   
   .navbar-nav {
     margin: 0;
+    flex: 1;
+    min-width: 0;
   }
   
   .user-dropdown {
     padding: var(--spacing-xs);
+    min-width: 40px;
+  }
+  
+  .el-avatar {
+    width: 28px !important;
+    height: 28px !important;
   }
 }
 

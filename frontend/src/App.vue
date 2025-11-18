@@ -62,11 +62,15 @@ body {
 /* App 容器 */
 #app {
   min-height: 100vh;
+  min-height: -webkit-fill-available; /* iOS Safari 修復 */
   background: var(--bg-secondary);
   color: var(--text-primary);
   transition: background var(--transition-base), color var(--transition-base);
   position: relative;
   overflow-x: hidden;
+  /* iOS 優化 */
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
 }
 
 /* 動態背景漸變 */
@@ -85,7 +89,7 @@ body {
   );
   animation: backgroundMove 20s ease-in-out infinite;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1; /* 確保在內容下方 */
 }
 
 @keyframes backgroundMove {
@@ -136,13 +140,23 @@ body {
   --el-transition-duration: var(--transition-base);
 }
 
-/* 卡片美化 */
+/* 卡片美化 - 強化 iOS 可見性 */
 .el-card {
   border-radius: var(--radius-lg) !important;
   border: none !important;
   box-shadow: var(--shadow-md) !important;
   transition: all var(--transition-base) !important;
   background: var(--bg-primary) !important;
+  /* iOS 強制可見性修復 */
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+  position: relative !important;
+  z-index: 10 !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
 }
 
 .el-card:hover {
@@ -221,6 +235,21 @@ body {
   border-radius: var(--radius-full) !important;
   font-weight: 600 !important;
   box-shadow: var(--shadow-sm) !important;
+}
+
+/* iOS Safari 強制可見性 */
+.el-row,
+.el-col,
+.el-button,
+.el-statistic,
+.el-timeline,
+.el-empty,
+.el-avatar,
+.el-tag {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
 }
 
 /* 響應式優化 */

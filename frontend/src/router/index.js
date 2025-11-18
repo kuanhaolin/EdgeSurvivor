@@ -49,7 +49,7 @@ const routes = [
   {
     path: '/dashboard',
     name: 'Dashboard',
-    component: Dashboard,
+    component: () => import('@/views/Dashboard.vue'),
     meta: {
       title: '控制台 - EdgeSurvivor',
       requiresAuth: true
