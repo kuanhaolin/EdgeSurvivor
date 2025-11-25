@@ -1,0 +1,100 @@
+@startuml UC7: 活動互評
+!theme plain
+
+skinparam sequence {
+    ArrowThickness 2
+    ParticipantBorderThickness 2
+    LifeLineBorderThickness 2
+    LifeLineBackgroundColor #FFFFFF
+    ActorBorderThickness 2
+    ActorBackgroundColor #FFFFFF
+    ParticipantBackgroundColor #FFFFFF
+    ParticipantBorderColor #000000
+    ActorBorderColor #000000
+}
+
+title UC7: 活動互評流程
+
+actor 參與者 as Participant
+participant "前端 SPA\n(Vue 3)\nviews/ActivityDetail.vue\napi/reviews.js" as Frontend
+participant "後端 API\n(Flask)\nblueprints/reviews.py" as Backend
+participant "資料庫\n(MariaDB)\nmodels/activity_review.py" as DB
+
+Participant -> Frontend: 1. 進入已完成的活動詳情頁面
+
+Frontend -> Backend: 2. **HTTP GET**\n/api/activities/{id}\nAuthorization: Bearer {token}
+
+activate Backend
+
+Backend -> DB: 3. **SQL SELECT**\nSELECT * FROM activities\nWHERE id = {id}
+
+activate DB
+DB -> Backend: 4. 返回活動資料\n檢查 status = 'completed'
+deactivate DB
+
+Backend -> Frontend: 5. **HTTP 200**\n{activity: {..., status: 'completed'}}
+Frontend -> Participant: 6. 顯示「評價活動夥伴」按鈕
+
+deactivate Backend
+
+Participant -> Frontend: 7. 點擊按鈕
+
+Frontend -> Backend: 8. **HTTP GET**\n/api/activities/{id}/participants\nAuthorization: Bearer {token}
+
+activate Backend
+
+Backend -> DB: 9. **SQL SELECT**\nSELECT * FROM activity_participants\nWHERE activity_id = {id}\nAND status = 'approved'
+
+activate DB
+DB -> Backend: 10. 返回參與者列表
+deactivate DB
+
+Backend -> Backend: 11. 過濾掉自己\n(排除 reviewer_id = current_user_id)
+
+Backend -> Frontend: 12. **HTTP 200**\n{participants: [...]}
+Frontend -> Participant: 13. 顯示其他參與者列表（不含自己）
+
+deactivate Backend
+
+Participant -> Frontend: 14. 選擇要評價的對象\n撰寫評語\n點擊「送出評價」
+
+Frontend -> Backend: 15. **HTTP POST**\n/api/activities/{id}/reviews\nAuthorization: Bearer {token}\n{reviewee_id, rating, comment}
+
+activate Backend
+
+Backend -> Backend: 16. 驗證 JWT Token\n驗證活動狀態為 completed\n驗證結束日期已過 (today >= end_date)\n驗證 rating (1-5) 和 comment 必填\n(blueprints/reviews.py)
+
+Backend -> DB: 17. **SQL SELECT**\nSELECT * FROM activity_reviews\nWHERE reviewer_id = {user_id}\nAND reviewee_id = {reviewee_id}\nAND activity_id = {id}
+
+activate DB
+DB -> Backend: 18. 返回評價記錄
+deactivate DB
+
+Backend -> Backend: 19. 檢查是否已評價過該對象
+
+alt 已評價過
+    Backend -> Frontend: **HTTP 400**\n錯誤: 已評價過此使用者
+    Frontend -> Participant: 顯示錯誤訊息
+    deactivate Backend
+else 未評價過
+    Backend -> DB: 20. **SQL INSERT**\nINSERT INTO activity_reviews\n(reviewer_id, reviewee_id, activity_id, rating, comment, created_at)
+    
+    activate DB
+    DB -> Backend: 21. 評價記錄建立成功
+    deactivate DB
+    
+    Backend -> DB: 22. **SQL UPDATE**\nUPDATE users\nSET rating_count = rating_count + 1\n計算並更新 average_rating\nWHERE user_id = {reviewee_id}
+    
+    activate DB
+    DB -> Backend: 23. 更新成功
+    deactivate DB
+    
+    Backend -> Frontend: 24. **HTTP 201**\n{success: true, message: "評價成功"}
+    
+    Frontend -> Participant: 25. 顯示「評價成功」訊息
+    
+    deactivate Backend
+end
+
+@enduml
+

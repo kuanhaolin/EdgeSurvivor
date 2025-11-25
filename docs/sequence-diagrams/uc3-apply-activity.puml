@@ -1,0 +1,78 @@
+@startuml UC3: 申請加入活動
+!theme plain
+
+skinparam sequence {
+    ArrowThickness 2
+    ParticipantBorderThickness 2
+    LifeLineBorderThickness 2
+    LifeLineBackgroundColor #FFFFFF
+    ActorBorderThickness 2
+    ActorBackgroundColor #FFFFFF
+    ParticipantBackgroundColor #FFFFFF
+    ParticipantBorderColor #000000
+    ActorBorderColor #000000
+}
+
+title UC3: 申請加入活動流程
+
+actor 使用者 as User
+participant "前端 SPA\n(Vue 3)\nviews/ActivityDetail.vue\napi/activities.js" as Frontend
+participant "後端 API\n(Flask)\nblueprints/activities.py" as Backend
+participant "資料庫\n(MariaDB)\nmodels/activity_participant.py" as DB
+
+User -> Frontend: 1. 瀏覽活動列表\n點擊活動詳情
+
+Frontend -> Backend: 2. **HTTP GET**\n/api/activities/{id}\nAuthorization: Bearer {token}
+
+activate Backend
+
+Backend -> DB: 3. **SQL SELECT**\nSELECT * FROM activities\nWHERE id = {id}
+
+activate DB
+DB -> Backend: 4. 返回活動資料
+deactivate DB
+
+Backend -> Frontend: 5. **HTTP 200**\n{activity: {...}}
+Frontend -> User: 6. 顯示活動詳情
+
+deactivate Backend
+
+User -> Frontend: 7. 點擊「申請加入」
+Frontend -> User: 8. 顯示申請對話框
+
+User -> Frontend: 9. 填寫申請訊息（選填）\n點擊「送出申請」
+
+Frontend -> Backend: 10. **HTTP POST**\n/api/activities/{id}/join\nAuthorization: Bearer {token}\n{message: "..."}
+
+activate Backend
+
+Backend -> Backend: 11. 驗證 JWT Token\n(flask_jwt_extended)
+
+Backend -> DB: 12. **SQL SELECT**\nSELECT * FROM activities\nWHERE id = {id}
+
+activate DB
+DB -> Backend: 13. 返回活動資料
+deactivate DB
+
+Backend -> Backend: 14. 檢查活動是否已滿\n檢查是否已參與或申請\n(blueprints/activities.py)
+
+alt 不符合條件或已滿
+    Backend -> Frontend: **HTTP 400**\n錯誤: 不符合條件或活動已滿
+    Frontend -> User: 顯示錯誤訊息
+    deactivate Backend
+else 符合條件
+    Backend -> DB: 15. **SQL INSERT**\nINSERT INTO activity_participants\n(activity_id, user_id, status: 'pending', message)
+    
+    activate DB
+    DB -> Backend: 16. 參與者記錄建立成功
+    deactivate DB
+    
+    Backend -> Frontend: 17. **HTTP 201**\n{success: true, message: "申請已送出"}
+    
+    Frontend -> User: 18. 顯示「申請已送出，等待審核」
+    
+    deactivate Backend
+end
+
+@enduml
+

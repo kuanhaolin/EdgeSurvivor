@@ -1,0 +1,63 @@
+@startuml UC2: 建立活動
+!theme plain
+
+skinparam sequence {
+    ArrowThickness 2
+    ParticipantBorderThickness 2
+    LifeLineBorderThickness 2
+    LifeLineBackgroundColor #FFFFFF
+    ActorBorderThickness 2
+    ActorBackgroundColor #FFFFFF
+    ParticipantBackgroundColor #FFFFFF
+    ParticipantBorderColor #000000
+    ActorBorderColor #000000
+}
+
+title UC2: 建立活動流程
+
+actor 使用者 as User
+participant "前端 SPA\n(Vue 3)\nviews/Activities.vue\napi/activities.js" as Frontend
+participant "後端 API\n(Flask)\nblueprints/activities.py" as Backend
+participant "資料庫\n(MariaDB)\nmodels/activity.py" as DB
+
+User -> Frontend: 1. 點擊「建立活動」
+Frontend -> User: 2. 顯示活動表單
+
+User -> Frontend: 3. 填寫活動資訊\n上傳封面圖片\n點擊「發布」
+
+Frontend -> Frontend: 4. 驗證輸入資料\n(前端驗證)
+
+Frontend -> Backend: 5. **HTTP POST**\n/api/activities\nAuthorization: Bearer {token}\n{title, date, location, description, ...}
+
+activate Backend
+
+Backend -> Backend: 6. 驗證 JWT Token\n(flask_jwt_extended)
+
+Backend -> Backend: 7. 驗證必填欄位\n日期邏輯檢查\n(blueprints/activities.py)
+
+alt 驗證失敗
+    Backend -> Frontend: **HTTP 400**\n錯誤: 驗證失敗
+    Frontend -> User: 顯示錯誤訊息
+    deactivate Backend
+else 驗證成功
+    Backend -> DB: 8. **SQL INSERT**\nINSERT INTO activities\n(title, date, location, creator_id, ...)
+    
+    activate DB
+    DB -> Backend: 9. 返回活動 ID
+    deactivate DB
+    
+    Backend -> DB: 10. **SQL INSERT**\nINSERT INTO activity_participants\n(activity_id, user_id, role: 'creator', status: 'joined')
+    
+    activate DB
+    DB -> Backend: 11. 參與者記錄建立成功
+    deactivate DB
+    
+    Backend -> Frontend: 12. **HTTP 201**\n{activity: {...}, id: {activity_id}}
+    
+    Frontend -> User: 13. 導向活動詳情頁面\n路由: /activities/{id}
+    
+    deactivate Backend
+end
+
+@enduml
+

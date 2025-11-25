@@ -1,0 +1,72 @@
+@startuml UC2: 建立活動活動圖
+!theme plain
+
+skinparam activity {
+    FontSize 12
+}
+
+skinparam swimlane {
+    TitleFontSize 14
+    TitleFontStyle bold
+}
+
+title UC2: 建立活動流程活動圖
+
+|使用者|
+start
+
+:點擊「建立活動」;
+
+|前端 SPA\nviews/Activities.vue\napi/activities.js|
+:顯示活動表單;
+
+|使用者|
+:填寫活動資訊\n(標題、日期、地點、描述等);
+
+:上傳封面圖片（選填）;
+
+:點擊「發布」;
+
+|前端 SPA\nviews/Activities.vue\napi/activities.js|
+:驗證輸入資料\n(前端驗證);
+
+:發送 POST /api/activities\nAuthorization: Bearer {token};
+
+|後端 API\nblueprints/activities.py|
+:驗證 JWT Token\n(flask_jwt_extended);
+
+:驗證必填欄位;
+
+if (必填欄位完整?) then (是)
+    :驗證日期邏輯;
+    
+    if (結束日期 >= 開始日期?) then (是)
+        |資料庫\nMariaDB|
+        :建立活動記錄\n(INSERT INTO activities);
+        
+        :將創建者加入為參與者\n(INSERT INTO activity_participants);
+        
+        |後端 API\nblueprints/activities.py|
+        :返回 HTTP 201\n活動資料;
+        
+        |前端 SPA\nviews/Activities.vue\napi/activities.js|
+        :導向活動詳情頁面\n路由: /activities/{id};
+        stop
+    else (否)
+        |後端 API\nblueprints/activities.py|
+        :返回 HTTP 400\n錯誤：結束日期必須大於開始日期;
+        
+        |前端 SPA\nviews/Activities.vue\napi/activities.js|
+        :顯示錯誤訊息;
+        stop
+    endif
+else (否)
+    |後端 API\nblueprints/activities.py|
+    :返回 HTTP 400\n錯誤：請填寫所有必填欄位;
+    
+    |前端 SPA\nviews/activities/CreateActivity.vue\napi/activities.js|
+    :顯示錯誤訊息;
+    stop
+endif
+
+@enduml

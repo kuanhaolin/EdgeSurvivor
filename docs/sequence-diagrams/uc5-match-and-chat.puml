@@ -1,0 +1,123 @@
+@startuml UC5: 媒合與開啟聊天室
+!theme plain
+
+skinparam sequence {
+    ArrowThickness 2
+    ParticipantBorderThickness 2
+    LifeLineBorderThickness 2
+    LifeLineBackgroundColor #FFFFFF
+    ActorBorderThickness 2
+    ActorBackgroundColor #FFFFFF
+    ParticipantBackgroundColor #FFFFFF
+    ParticipantBorderColor #000000
+    ActorBorderColor #000000
+}
+
+title UC5: 媒合與開啟聊天室流程
+
+actor "使用者 A" as UserA
+actor "使用者 B" as UserB
+participant "前端 SPA\n(Vue 3)\nviews/Matches.vue\nviews/Chat.vue\napi/matches.js\nservices/socket.js" as Frontend
+participant "後端 API\n(Flask)\nblueprints/matches.py" as Backend
+participant "資料庫\n(MariaDB)\nmodels/match.py" as DB
+participant "Socket.IO 伺服器\nsocketio_events.py" as SocketIO
+
+UserA -> Frontend: 1. 在活動中看到使用者 B\n點擊「發送媒合申請」
+Frontend -> UserA: 2. 顯示媒合申請對話框
+
+UserA -> Frontend: 3. 填寫申請訊息\n點擊「送出」
+
+Frontend -> Backend: 4. **HTTP POST**\n/api/matches\nAuthorization: Bearer {token}\n{user_b_id, message, activity_id}
+
+activate Backend
+
+Backend -> Backend: 5. 驗證 JWT Token\n(flask_jwt_extended)
+
+Backend -> DB: 6. **SQL INSERT**\nINSERT INTO matches\n(user_a_id, user_b_id, activity_id, status: 'pending', message)
+
+activate DB
+DB -> Backend: 7. 媒合記錄建立成功\n返回 match_id
+deactivate DB
+
+Backend -> Frontend: 8. **HTTP 201**\n{match: {...}, id: {match_id}}
+
+Frontend -> UserA: 9. 顯示「申請已送出」
+
+deactivate Backend
+
+UserB -> Frontend: 10. 查看媒合申請
+
+Frontend -> Backend: 11. **HTTP GET**\n/api/matches\nAuthorization: Bearer {token}
+
+activate Backend
+
+Backend -> DB: 12. **SQL SELECT**\nSELECT * FROM matches\nWHERE user_b_id = {user_b_id}\nAND status = 'pending'
+
+activate DB
+DB -> Backend: 13. 返回媒合申請列表
+deactivate DB
+
+Backend -> Frontend: 14. **HTTP 200**\n{matches: [...]}
+Frontend -> UserB: 15. 顯示媒合申請列表
+
+deactivate Backend
+
+UserB -> Frontend: 16. 點擊「接受」
+
+Frontend -> Backend: 17. **HTTP PUT**\n/api/matches/{id}/accept\nAuthorization: Bearer {token}
+
+activate Backend
+
+Backend -> Backend: 18. 驗證 JWT Token\n驗證操作權限\n(blueprints/matches.py)
+
+Backend -> DB: 19. **SQL UPDATE**\nUPDATE matches\nSET status = 'accepted'\nWHERE match_id = {id}
+
+activate DB
+DB -> Backend: 20. 更新成功
+deactivate DB
+
+Backend -> DB: 21. **SQL SELECT/INSERT**\n檢查聊天室是否存在\n或建立聊天室記錄
+
+activate DB
+DB -> Backend: 22. 聊天室準備完成\n返回 room_id
+deactivate DB
+
+Backend -> Frontend: 23. **HTTP 200**\n{match: {...}, room_id: {room_id}}
+
+Frontend -> SocketIO: 24. **WebSocket**\n連接 Socket.IO\nemit('join_chat', {match_id, token})
+
+activate SocketIO
+
+SocketIO -> SocketIO: 25. 驗證 Token\n加入房間\n(socketio_events.py)
+
+SocketIO -> Frontend: 26. **WebSocket Event**\non('connected', {match_id})
+
+Frontend -> UserA: 27. 顯示聊天室介面
+Frontend -> UserB: 28. 顯示聊天室介面
+
+UserA -> Frontend: 29. 發送訊息
+
+Frontend -> SocketIO: 30. **WebSocket Event**\nemit('send_message', {message, match_id})
+
+SocketIO -> Backend: 31. 處理訊息\n驗證權限\n(socketio_events.py)
+
+activate Backend
+
+Backend -> DB: 32. **SQL INSERT**\nINSERT INTO chat_messages\n(match_id, sender_id, message, timestamp)
+
+activate DB
+DB -> Backend: 33. 訊息儲存成功
+deactivate DB
+
+deactivate Backend
+
+SocketIO -> SocketIO: 34. 廣播訊息到房間
+
+SocketIO -> Frontend: 35. **WebSocket Event**\nemit('new_message', {message, sender, timestamp})
+
+Frontend -> UserB: 36. 顯示新訊息
+
+deactivate SocketIO
+
+@enduml
+

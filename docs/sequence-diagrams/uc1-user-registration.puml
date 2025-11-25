@@ -1,0 +1,62 @@
+@startuml UC1: 使用者註冊
+!theme plain
+
+skinparam sequence {
+    ArrowThickness 2
+    ParticipantBorderThickness 2
+    LifeLineBorderThickness 2
+    LifeLineBackgroundColor #FFFFFF
+    ActorBorderThickness 2
+    ActorBackgroundColor #FFFFFF
+    ParticipantBackgroundColor #FFFFFF
+    ParticipantBorderColor #000000
+    ActorBorderColor #000000
+}
+
+title UC1: 使用者註冊流程
+
+actor 使用者 as User
+participant "前端 SPA\n(Vue 3)\nviews/Register.vue\napi/auth.js" as Frontend
+participant "後端 API\n(Flask)\nblueprints/auth.py" as Backend
+participant "資料庫\n(MariaDB)\nmodels/user.py" as DB
+participant "Email 服務\nutils/email.py" as Email
+
+User -> Frontend: 1. 點擊「註冊」按鈕
+Frontend -> User: 2. 顯示註冊表單
+
+User -> Frontend: 3. 輸入 Email、密碼、姓名\n點擊「送出」
+
+Frontend -> Frontend: 4. 驗證表單格式\n(前端驗證)
+
+Frontend -> Backend: 5. **HTTP POST**\n/api/auth/register\n{email, password, name}
+
+activate Backend
+
+Backend -> Backend: 6. 驗證 Email 唯一性\n(blueprints/auth.py)
+
+alt Email 已被註冊
+    Backend -> Frontend: **HTTP 400**\n錯誤: Email 已被註冊
+    Frontend -> User: 顯示錯誤訊息
+    deactivate Backend
+else Email 可用
+    Backend -> Backend: 7. 使用 scrypt 加密密碼\n(models/user.py)
+    
+    Backend -> DB: 8. **SQL INSERT**\nINSERT INTO users\n(email, password_hash, name)
+    
+    activate DB
+    DB -> Backend: 9. 返回使用者 ID
+    deactivate DB
+    
+    Backend -> Backend: 10. 建立 JWT Token\n(access_token, refresh_token)
+    
+    Backend -> Frontend: 11. **HTTP 201**\n{user: {...}, access_token, refresh_token}
+    
+    Frontend -> Frontend: 12. 儲存 Token 至 localStorage
+    
+    Frontend -> User: 13. 導向主控台頁面
+    
+    deactivate Backend
+end
+
+@enduml
+

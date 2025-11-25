@@ -1,0 +1,102 @@
+@startuml UC6: 費用分攤與結算活動圖
+!theme plain
+
+skinparam activity {
+    FontSize 12
+}
+
+skinparam swimlane {
+    TitleFontSize 14
+    TitleFontStyle bold
+}
+
+title UC6: 費用分攤與結算流程活動圖
+
+|參與者|
+start
+
+:進入活動詳情頁面;
+
+:點擊「費用管理」分頁;
+
+|前端 SPA\nviews/expenses/Expenses.vue\napi/expenses.js|
+:發送 GET /api/activities/{id}/expenses\nAuthorization: Bearer {token};
+
+|後端 API\nblueprints/expenses.py|
+:查詢費用列表\n(SELECT * FROM expenses\nWHERE activity_id = {id});
+
+|資料庫\nMariaDB|
+:返回費用列表;
+
+|後端 API\nblueprints/expenses.py|
+:返回費用列表;
+
+|前端 SPA\nviews/expenses/Expenses.vue\napi/expenses.js|
+:顯示費用列表;
+
+|參與者|
+repeat
+    :點擊「新增費用」;
+    
+    :填寫費用資訊\n(金額、類別、付款者、描述);
+    
+    :點擊「儲存」;
+    
+    |前端 SPA\nviews/expenses/Expenses.vue\napi/expenses.js|
+    :驗證金額格式;
+    
+    if (金額格式正確?) then (是)
+        :發送 POST /api/activities/{id}/expenses\n{amount, category, payer_id, description}\nAuthorization: Bearer {token};
+        
+        |後端 API\nblueprints/expenses.py|
+        :驗證操作權限\n(是否為參與者);
+        
+        |資料庫\nMariaDB|
+        :建立費用記錄\n(INSERT INTO expenses);
+        
+        |後端 API\nblueprints/expenses.py|
+        :返回 HTTP 201\n成功訊息;
+        
+        |前端 SPA\nviews/expenses/Expenses.vue\napi/expenses.js|
+        :顯示費用已新增;
+    else (否)
+        |前端 SPA\nviews/expenses/Expenses.vue\napi/expenses.js|
+        :顯示錯誤：金額格式不正確;
+    endif
+    
+repeat while (還有其他費用要新增?) is (是)
+-> 否;
+
+|參與者|
+:點擊「查看結算」;
+
+|前端 SPA\nviews/expenses/Expenses.vue\napi/expenses.js|
+:發送 GET /api/activities/{id}/expenses/settlement\nAuthorization: Bearer {token};
+
+|後端 API\nblueprints/expenses.py|
+:查詢所有費用記錄\n(SELECT * FROM expenses\nWHERE activity_id = {id});
+
+|資料庫\nMariaDB|
+:返回所有費用記錄;
+
+|後端 API\nblueprints/expenses.py|
+:查詢所有參與者\n(SELECT * FROM activity_participants\nWHERE activity_id = {id}\nAND status = 'approved');
+
+|資料庫\nMariaDB|
+:返回所有參與者;
+
+|後端 API\nblueprints/expenses.py|
+:計算每人應分攤金額\n(總費用 / 參與人數);
+
+:計算每人淨餘額\n(已付 - 應付);
+
+:使用貪婪演算法\n計算最佳分攤方案\n產生最少轉帳次數方案;
+
+:返回 HTTP 200\n結算報告\n{settlement_plan: [...]};
+
+|前端 SPA\nviews/expenses/Expenses.vue\napi/expenses.js|
+:顯示結算報告\n(誰付給誰多少錢);
+
+stop
+
+@enduml

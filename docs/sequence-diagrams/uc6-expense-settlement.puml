@@ -1,0 +1,86 @@
+@startuml UC6: 費用分攤與結算
+!theme plain
+
+skinparam sequence {
+    ArrowThickness 2
+    ParticipantBorderThickness 2
+    LifeLineBorderThickness 2
+    LifeLineBackgroundColor #FFFFFF
+    ActorBorderThickness 2
+    ActorBackgroundColor #FFFFFF
+    ParticipantBackgroundColor #FFFFFF
+    ParticipantBorderColor #000000
+    ActorBorderColor #000000
+}
+
+title UC6: 費用分攤與結算流程
+
+actor 參與者 as Participant
+participant "前端 SPA\n(Vue 3)\nviews/ActivityDetail.vue\nviews/expenses/Expenses.vue\napi/expenses.js" as Frontend
+participant "後端 API\n(Flask)\nblueprints/expenses.py" as Backend
+participant "資料庫\n(MariaDB)\nmodels/expense.py" as DB
+
+Participant -> Frontend: 1. 進入活動詳情頁面\n點擊「費用管理」
+
+Frontend -> Backend: 2. **HTTP GET**\n/api/activities/{id}/expenses\nAuthorization: Bearer {token}
+
+activate Backend
+
+Backend -> DB: 3. **SQL SELECT**\nSELECT * FROM expenses\nWHERE activity_id = {id}\nORDER BY created_at DESC
+
+activate DB
+DB -> Backend: 4. 返回費用列表
+deactivate DB
+
+Backend -> Frontend: 5. **HTTP 200**\n{expenses: [...]}
+Frontend -> Participant: 6. 顯示費用列表
+
+deactivate Backend
+
+Participant -> Frontend: 7. 點擊「新增費用」\n填寫費用資訊\n儲存
+
+Frontend -> Backend: 8. **HTTP POST**\n/api/activities/{id}/expenses\nAuthorization: Bearer {token}\n{amount, category, payer_id, description}
+
+activate Backend
+
+Backend -> Backend: 9. 驗證 JWT Token\n驗證操作權限（是否為參與者）\n(blueprints/expenses.py)
+
+Backend -> DB: 10. **SQL INSERT**\nINSERT INTO expenses\n(activity_id, amount, category, payer_id, description)
+
+activate DB
+DB -> Backend: 11. 費用記錄建立成功\n返回 expense_id
+deactivate DB
+
+Backend -> Frontend: 12. **HTTP 201**\n{expense: {...}, id: {expense_id}}
+
+Frontend -> Participant: 13. 顯示費用已新增
+
+deactivate Backend
+
+note right of Participant
+  重複步驟 7-13
+  新增其他費用
+end note
+
+Participant -> Frontend: 14. 點擊「查看結算」
+
+Frontend -> Backend: 15. **HTTP GET**\n/api/activities/{id}/expenses/settlement\nAuthorization: Bearer {token}
+
+activate Backend
+
+Backend -> DB: 16. **SQL SELECT**\nSELECT * FROM expenses\nWHERE activity_id = {id}\nSELECT * FROM activity_participants\nWHERE activity_id = {id}\nAND status = 'approved'
+
+activate DB
+DB -> Backend: 17. 返回所有費用記錄\n返回所有參與者
+deactivate DB
+
+Backend -> Backend: 18. 計算最佳分攤方案\n(貪婪演算法)\n計算每人淨餘額\n產生最少轉帳次數方案\n(blueprints/expenses.py)
+
+Backend -> Frontend: 19. **HTTP 200**\n{settlement: {\n  total_amount: 1000,\n  per_person: 250,\n  plan: [\n    {from: "A", to: "B", amount: 100},\n    {from: "C", to: "B", amount: 150}\n  ]\n}}
+
+Frontend -> Participant: 20. 顯示結算報告\n(誰付給誰多少錢)
+
+deactivate Backend
+
+@enduml
+

@@ -1,0 +1,105 @@
+@startuml EdgeSurvivor Use Case Diagram
+!theme plain
+
+skinparam usecase {
+    BackgroundColor #FFFFFF
+    BorderColor #000000
+    FontSize 11
+}
+
+skinparam actor {
+    BackgroundColor #FFFFFF
+    BorderColor #000000
+    FontSize 12
+}
+
+skinparam package {
+    BackgroundColor #F5F5F5
+    BorderColor #000000
+    FontSize 13
+    FontStyle bold
+}
+
+title EdgeSurvivor System
+
+actor "使用者" as User
+actor "活動創建者" as Creator
+actor "使用者" as Participant
+
+rectangle "EdgeSurvivor System" {
+    
+    package "身份與帳戶管理" #LightGreen {
+        usecase "1.1 註冊" as UC1_1
+        usecase "1.2 Email登入" as UC1_2
+        usecase "1.3 2FA驗證" as UC1_3
+        usecase "1.4 Google\nOAuth 登入" as UC1_4
+        usecase "1.5 忘記密碼" as UC1_5
+        usecase "1.6 刪除帳號" as UC1_6
+        usecase "1.7 管理個人\n資料" as UC1_7
+    }
+    
+    package "活動建立與管理" #LightYellow {
+        usecase "2.1 建立活動" as UC2_1
+        usecase "2.2 管理活動" as UC2_2
+        usecase "2.3 審核活動\n申請" as UC2_3
+        usecase "2.4 控制討論區\n訊息" as UC2_4
+        usecase "2.5 管理費用" as UC2_5
+        usecase "2.6 刪除活動" as UC2_6
+        usecase "2.7 離開活動" as UC2_7
+    }
+    
+    package "互動與媒合" #LightPink {
+        usecase "3.1 媒合瀏覽" as UC3_1
+        usecase "3.2 發送媒合\n申請" as UC3_2
+        usecase "3.3 審核媒合\n申請" as UC3_3
+        usecase "3.4 私訊/\n傳訊息" as UC3_4
+    }
+    
+    package "活動參與與互動" #LightBlue {
+        usecase "4.1 活動瀏覽\n與篩選" as UC4_1
+        usecase "4.2 申請活動" as UC4_2
+        usecase "4.3 互評" as UC4_3
+        usecase "4.4 費用新增" as UC4_4
+        usecase "4.5 費用分攤" as UC4_5
+        usecase "4.6 上傳照片" as UC4_6
+        usecase "4.7 討論區\n留言" as UC4_7
+    }
+}
+
+' 使用者與所有 Use Case 的關係
+User --> UC1_1
+User --> UC1_2
+User --> UC1_4
+User --> UC1_5
+User --> UC1_6
+User --> UC1_7
+User --> UC2_1
+User --> UC2_7
+User --> UC3_1
+User --> UC3_2
+User --> UC3_3
+User --> UC3_4
+User --> UC4_1
+User --> UC4_2
+
+' 創建者專屬功能
+Creator --> UC2_2
+Creator --> UC2_3
+Creator --> UC2_4
+Creator --> UC2_5
+Creator --> UC2_6
+
+' 參與者專屬功能  
+Participant --> UC4_3
+Participant --> UC4_4
+Participant --> UC4_5
+Participant --> UC4_6
+Participant --> UC4_7
+Participant --> UC2_7
+
+' Use Case 之間的關係
+UC1_2 ..> UC1_3 : <<extend>>
+UC1_5 ..> UC1_6 : <<include>>
+
+@enduml
+

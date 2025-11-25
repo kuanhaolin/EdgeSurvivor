@@ -1,0 +1,112 @@
+@startuml UC7: 活動互評活動圖
+!theme plain
+
+skinparam activity {
+    FontSize 12
+}
+
+skinparam swimlane {
+    TitleFontSize 14
+    TitleFontStyle bold
+}
+
+title UC7: 活動互評流程活動圖
+
+|參與者|
+start
+
+:進入活動詳情頁面;
+
+|前端 SPA\nviews/ActivityDetail.vue\napi/reviews.js|
+:發送 GET /api/activities/{id}\nAuthorization: Bearer {token};
+
+|後端 API\nblueprints/reviews.py|
+:查詢活動資料\n(SELECT * FROM activities\nWHERE id = {id});
+
+|資料庫\nMariaDB|
+:返回活動資料;
+
+|後端 API\nblueprints/reviews.py|
+:檢查活動狀態;
+
+if (活動狀態為 completed?) then (是)
+    :返回活動資料\n{status: 'completed'};
+    
+    |前端 SPA\nviews/ActivityDetail.vue\napi/reviews.js|
+    :顯示「評價活動夥伴」按鈕;
+    
+    |參與者|
+    :點擊按鈕;
+    
+    |前端 SPA\nviews/ActivityDetail.vue\napi/reviews.js|
+    :發送 GET /api/activities/{id}/participants\nAuthorization: Bearer {token};
+    
+    |後端 API\nblueprints/reviews.py|
+    :查詢參與者列表\n(SELECT * FROM activity_participants\nWHERE activity_id = {id}\nAND status = 'approved');
+    
+    |資料庫\nMariaDB|
+    :返回參與者列表;
+    
+    |後端 API\nblueprints/reviews.py|
+    :過濾掉自己\n(排除 reviewer_id = current_user_id);
+    
+    :返回其他參與者列表;
+    
+    |前端 SPA\nviews/ActivityDetail.vue\napi/reviews.js|
+    :顯示其他參與者列表（不含自己）;
+    
+    |參與者|
+    :選擇要評價的對象;
+    
+    :撰寫評語;
+    
+    :點擊「送出評價」;
+    
+    |前端 SPA\nviews/ActivityDetail.vue\napi/reviews.js|
+    :發送 POST /api/activities/{id}/reviews\n{reviewee_id, rating, comment}\nAuthorization: Bearer {token};
+    
+    |後端 API\nblueprints/reviews.py|
+    :驗證 JWT Token;
+    
+    :驗證活動狀態為 completed;
+    
+    :驗證結束日期已過 (today >= end_date);
+    
+    :驗證 rating (1-5) 和 comment 必填;
+    
+    :查詢是否已評價過\n(SELECT * FROM activity_reviews\nWHERE reviewer_id = {user_id}\nAND reviewee_id = {reviewee_id}\nAND activity_id = {id});
+    
+    |資料庫\nMariaDB|
+    :返回評價記錄;
+    
+    |後端 API\nblueprints/reviews.py|
+    if (已評價過該對象?) then (否)
+        |資料庫\nMariaDB|
+        :建立評價記錄\n(INSERT INTO activity_reviews\n包含 rating, comment);
+        
+        :更新被評價者的評價數量\n計算並更新 average_rating\n(UPDATE users\nSET rating_count = rating_count + 1);
+        
+        |後端 API\nblueprints/reviews.py|
+        :返回 HTTP 201\n成功訊息;
+        
+        |前端 SPA\nviews/ActivityDetail.vue\napi/reviews.js|
+        :顯示「評價成功」訊息;
+        stop
+    else (是)
+        |後端 API\nblueprints/reviews.py|
+        :返回 HTTP 400\n錯誤：已評價過此使用者;
+        
+        |前端 SPA\nviews/ActivityDetail.vue\napi/reviews.js|
+        :顯示錯誤訊息;
+        stop
+    endif
+else (否)
+    |後端 API\nblueprints/reviews.py|
+    :返回 HTTP 400\n錯誤：活動尚未完成，無法評價;
+    
+    |前端 SPA\nviews/ActivityDetail.vue\napi/reviews.js|
+    :顯示錯誤訊息;
+    stop
+endif
+
+@enduml

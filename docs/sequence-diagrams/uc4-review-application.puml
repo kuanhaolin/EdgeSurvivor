@@ -1,0 +1,79 @@
+@startuml UC4: 審核參與申請
+!theme plain
+
+skinparam sequence {
+    ArrowThickness 2
+    ParticipantBorderThickness 2
+    LifeLineBorderThickness 2
+    LifeLineBackgroundColor #FFFFFF
+    ActorBorderThickness 2
+    ActorBackgroundColor #FFFFFF
+    ParticipantBackgroundColor #FFFFFF
+    ParticipantBorderColor #000000
+    ActorBorderColor #000000
+}
+
+title UC4: 審核參與申請流程
+
+actor 創建者 as Creator
+participant "前端 SPA\n(Vue 3)\nviews/ActivityDetail.vue\napi/activities.js" as Frontend
+participant "後端 API\n(Flask)\nblueprints/activities.py" as Backend
+participant "資料庫\n(MariaDB)\nmodels/activity_participant.py" as DB
+
+Creator -> Frontend: 1. 進入活動詳情頁面
+
+Frontend -> Backend: 2. **HTTP GET**\n/api/activities/{id}/participants\nAuthorization: Bearer {token}
+
+activate Backend
+
+Backend -> DB: 3. **SQL SELECT**\nSELECT * FROM activity_participants\nWHERE activity_id = {id}\nAND status = 'pending'
+
+activate DB
+DB -> Backend: 4. 返回參與者列表
+deactivate DB
+
+Backend -> Frontend: 5. **HTTP 200**\n{participants: [...]}
+Frontend -> Creator: 6. 顯示「待審核申請」列表
+
+deactivate Backend
+
+Creator -> Frontend: 7. 點擊申請查看詳情\n點擊「批准」或「拒絕」
+
+alt 選擇批准
+    Frontend -> Backend: 8. **HTTP POST**\n/api/activities/{id}/participants/{participant_id}/approve\nAuthorization: Bearer {token}
+else 選擇拒絕
+    Frontend -> Backend: 8. **HTTP POST**\n/api/activities/{id}/participants/{participant_id}/reject\nAuthorization: Bearer {token}\n{reason: "..."}
+end
+
+activate Backend
+
+Backend -> Backend: 9. 驗證 JWT Token\n驗證操作權限（是否為創建者）\n(blueprints/activities.py)
+
+Backend -> DB: 10. **SQL SELECT**\nSELECT * FROM activities\nWHERE id = {id} AND creator_id = {user_id}
+
+activate DB
+DB -> Backend: 11. 返回活動資料
+deactivate DB
+
+Backend -> Backend: 12. 檢查活動是否已滿\n計算當前參與者數量
+
+alt 批准且活動已滿
+    Backend -> Frontend: **HTTP 400**\n錯誤: 活動人數已滿
+    Frontend -> Creator: 顯示錯誤訊息
+    deactivate Backend
+else 可以批准或拒絕
+    Backend -> DB: 13. **SQL UPDATE**\nUPDATE activity_participants\nSET status = 'approved'/'rejected'\nWHERE participant_id = {participant_id}\nAND activity_id = {id}
+    
+    activate DB
+    DB -> Backend: 14. 更新成功
+    deactivate DB
+    
+    Backend -> Frontend: 15. **HTTP 200**\n{message: "已批准申請"/"已拒絕申請"}
+    
+    Frontend -> Creator: 16. 顯示操作成功訊息
+    
+    deactivate Backend
+end
+
+@enduml
+

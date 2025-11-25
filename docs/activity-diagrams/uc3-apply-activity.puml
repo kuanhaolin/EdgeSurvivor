@@ -1,0 +1,88 @@
+@startuml UC3: 申請加入活動活動圖
+!theme plain
+
+skinparam activity {
+    FontSize 12
+}
+
+skinparam swimlane {
+    TitleFontSize 14
+    TitleFontStyle bold
+}
+
+title UC3: 申請加入活動流程活動圖
+
+|使用者|
+start
+
+:瀏覽活動列表;
+
+:點擊活動查看詳情;
+
+|前端 SPA\nviews/ActivityDetail.vue\napi/activities.js|
+:發送 GET /api/activities/{id};
+
+|後端 API\nblueprints/activities.py|
+:查詢活動資料\n(SELECT * FROM activities);
+
+|資料庫\nMariaDB|
+:返回活動資料;
+
+|後端 API\nblueprints/activities.py|
+:返回活動資料;
+
+|前端 SPA\nviews/ActivityDetail.vue\napi/activities.js|
+:顯示活動詳情;
+
+|使用者|
+:點擊「申請加入」;
+
+|前端 SPA\nviews/ActivityDetail.vue\napi/activities.js|
+:顯示申請對話框;
+
+|使用者|
+:填寫申請訊息（選填）;
+
+:點擊「送出申請」;
+
+|前端 SPA\nviews/ActivityDetail.vue\napi/activities.js|
+:發送 POST /api/activities/{id}/join\nAuthorization: Bearer {token};
+
+|後端 API\nblueprints/activities.py|
+:驗證 JWT Token;
+
+:查詢活動資料\n(SELECT * FROM activities);
+
+|資料庫\nMariaDB|
+:返回活動資料;
+
+|後端 API\nblueprints/activities.py|
+if (活動狀態為 active?) then (是)
+    if (活動未滿?) then (是)
+        |資料庫\nMariaDB|
+        :建立參與者記錄\n(INSERT INTO activity_participants\nstatus: 'pending');
+        
+        |後端 API\nblueprints/activities.py|
+        :返回 HTTP 201\n成功訊息;
+        
+        |前端 SPA\nviews/ActivityDetail.vue\napi/activities.js|
+        :顯示「申請已送出，等待審核」;
+        stop
+    else (否)
+        |後端 API\nblueprints/activities.py|
+        :返回 HTTP 400\n錯誤：活動人數已滿;
+        
+        |前端 SPA\nviews/ActivityDetail.vue\napi/activities.js|
+        :顯示錯誤訊息;
+        stop
+    endif
+else (否)
+    |後端 API\nblueprints/activities.py|
+    :返回 HTTP 400\n錯誤：活動已結束或取消;
+    
+    |前端 SPA\nviews/ActivityDetail.vue\napi/activities.js|
+    :顯示錯誤訊息;
+    stop
+endif
+
+@enduml

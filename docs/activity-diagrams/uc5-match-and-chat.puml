@@ -1,0 +1,114 @@
+@startuml UC5: 媒合與開啟聊天室活動圖
+!theme plain
+
+skinparam activity {
+    FontSize 12
+}
+
+skinparam swimlane {
+    TitleFontSize 14
+    TitleFontStyle bold
+}
+
+title UC5: 媒合與開啟聊天室流程活動圖
+
+|使用者 A|
+start
+
+:在活動中看到使用者 B;
+
+:點擊「發送媒合申請」;
+
+|前端 SPA\nviews/Matches.vue\napi/matches.js|
+:顯示媒合申請對話框;
+
+|使用者 A|
+:填寫申請訊息;
+
+:點擊「送出」;
+
+|前端 SPA\nviews/Matches.vue\napi/matches.js|
+:發送 POST /api/matches\n{user_b_id, message}\nAuthorization: Bearer {token};
+
+|後端 API\nblueprints/matches.py|
+:驗證 JWT Token;
+
+|資料庫\nMariaDB|
+:建立媒合記錄\n(INSERT INTO matches\nstatus: 'pending');
+
+|後端 API\nblueprints/matches.py|
+:返回 HTTP 201\n成功訊息;
+
+|前端 SPA\nviews/Matches.vue\napi/matches.js|
+:顯示「申請已送出」;
+
+|使用者 B|
+:查看媒合申請;
+
+|前端 SPA\nviews/Matches.vue\napi/matches.js|
+:發送 GET /api/matches\nAuthorization: Bearer {token};
+
+|後端 API\nblueprints/matches.py|
+:查詢媒合申請\n(SELECT * FROM matches\nWHERE user_b_id = {user_b_id});
+
+|資料庫\nMariaDB|
+:返回媒合申請列表;
+
+|後端 API\nblueprints/matches.py|
+:返回媒合申請列表;
+
+|前端 SPA\nviews/Matches.vue\napi/matches.js|
+:顯示媒合申請列表;
+
+|使用者 B|
+:點擊「接受」或「拒絕」;
+
+if (選擇接受?) then (是)
+    |前端 SPA\nviews/Matches.vue\napi/matches.js|
+    :發送 PUT /api/matches/{id}/accept\nAuthorization: Bearer {token};
+    
+    |後端 API\nblueprints/matches.py|
+    :驗證操作權限;
+    
+    |資料庫\nMariaDB|
+    :更新媒合狀態\n(UPDATE matches\nSET status = 'accepted'\nWHERE match_id = {id});
+    
+    :檢查聊天室是否存在\n或建立聊天室記錄;
+    
+    |後端 API\nblueprints/matches.py|
+    :返回媒合成功訊息\n包含 room_id;
+    
+    |前端 SPA\nviews/Chat.vue\nservices/socket.js|
+    :連接 Socket.IO;
+    
+    |Socket.IO 伺服器\nsocketio_events.py|
+    :驗證 Token\n加入房間;
+    
+    :建立 WebSocket 連線;
+    
+    |前端 SPA\nviews/Chat.vue\nservices/socket.js|
+    :顯示聊天室介面;
+    
+    |使用者 A/B|
+    :開始即時聊天;
+    stop
+else (否)
+    |前端 SPA\nviews/Matches.vue\napi/matches.js|
+    :發送 PUT /api/matches/{id}/reject\nAuthorization: Bearer {token};
+    
+    |後端 API\nblueprints/matches.py|
+    :驗證操作權限;
+    
+    |資料庫\nMariaDB|
+    :更新媒合狀態\n(UPDATE matches\nSET status = 'rejected'\nWHERE match_id = {id});
+    
+    |後端 API\nblueprints/matches.py|
+    :返回成功訊息;
+    
+    |前端 SPA\nviews/Matches.vue\napi/matches.js|
+    :顯示「媒合已拒絕」;
+    
+    stop
+endif
+
+@enduml

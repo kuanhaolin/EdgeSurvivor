@@ -1,0 +1,289 @@
+@startuml EdgeSurvivor Use Case 流程圖
+
+title EdgeSurvivor 系統 Use Case 泳道圖
+
+skinparam swimlaneWidth 450
+skinparam Padding 10
+skinparam BoxPadding 10
+skinparam ActivityFontSize 12
+skinparam ArrowThickness 1
+skinparam swimlaneBorderThickness 1
+
+|使用者(創建者/參與者)|
+
+start
+
+' ========== 1. 身份與帳戶管理 ==========
+
+if (是否已註冊?) then (no)
+  :UC1.1 使用者註冊;
+  
+  |EdgeSurvivor系統|
+  :建立帳號;
+  
+  |資料儲存|
+  :儲存使用者資料;
+  |使用者(創建者/參與者)|
+  :UC1.6 Email驗證;
+else (yes)
+endif
+
+if (登入方式?) then (Email)
+  :UC1.2 Email登入;
+  
+  |EdgeSurvivor系統|
+  :驗證帳密;
+  |使用者(創建者/參與者)|
+  if (啟用2FA?) then (yes)
+    :UC1.3 2FA驗證;
+    
+    |EdgeSurvivor系統|
+    :驗證雙因素;
+    
+    |使用者(創建者/參與者)|
+  else (no)
+  endif
+else (Google)
+  :UC1.4 Google OAuth;
+  
+  |EdgeSurvivor系統|
+  :OAuth驗證;
+  
+  |使用者(創建者/參與者)|
+endif
+
+|EdgeSurvivor系統|
+:生成Token;
+:登入成功;
+
+|使用者(創建者/參與者)|
+
+partition "帳戶管理" {
+  :UC1.8 管理個人資料;
+  
+  |EdgeSurvivor系統|
+  :更新使用者資料;
+  
+  |使用者(創建者/參與者)|
+  :UC1.9 連結社群帳號;
+  
+  |EdgeSurvivor系統|
+  :更新社群連結;
+  
+  |使用者(創建者/參與者)|
+  :UC1.5 忘記密碼;
+  
+  |EdgeSurvivor系統|
+  :重設密碼流程;
+  
+  |使用者(創建者/參與者)|
+}
+
+' ========== 2. 活動建立與管理 ==========
+
+partition "活動管理" {
+  if (建立新活動?) then (yes)
+    :UC2.1 建立活動;
+    
+    |EdgeSurvivor系統|
+    :驗證並建立活動;
+    
+    |資料儲存|
+    :儲存活動資料;
+    
+    |使用者(創建者/參與者)|
+  else (no)
+  endif
+  
+  :UC2.2 管理活動;
+  
+  |EdgeSurvivor系統|
+  :更新活動資訊;
+  
+  |使用者(創建者/參與者)|
+  :UC2.3 審核活動申請;
+  
+  |EdgeSurvivor系統|
+  if (審核結果?) then (批准)
+    :更新為已批准;
+  else (拒絕)
+    :記錄拒絕原因;
+  endif
+  
+  |資料儲存|
+  :更新參與者狀態;
+  
+  |使用者(創建者/參與者)|
+  :UC2.4 移除參與者;
+  
+  |EdgeSurvivor系統|
+  :驗證權限並移除;
+  
+  |使用者(創建者/參與者)|
+  :UC2.5 控制討論區訊息;
+  
+  |EdgeSurvivor系統|
+  :管理討論訊息;
+  
+  |使用者(創建者/參與者)|
+  :UC2.6 控制分攤費用;
+  
+  |EdgeSurvivor系統|
+  :管理費用記錄;
+  
+  |使用者(創建者/參與者)|
+  if (刪除活動?) then (yes)
+    :UC2.7 刪除活動;
+    
+    |EdgeSurvivor系統|
+    :驗證權限並刪除;
+    
+    |資料儲存|
+    :級聯刪除相關資料;
+    
+    |使用者(創建者/參與者)|
+  else (no)
+    if (離開活動?) then (yes)
+      :UC2.8 離開活動;
+      
+      |EdgeSurvivor系統|
+      :更新參與狀態;
+      
+      |使用者(創建者/參與者)|
+    else (no)
+    endif
+  endif
+}
+
+' ========== 3. 互動與媒合 ==========
+
+partition "好友互動" {
+  :UC3.1 好友瀏覽與篩選;
+  
+  |EdgeSurvivor系統|
+  :處理查詢條件;
+  
+  |資料儲存|
+  :查詢使用者;
+  
+  |使用者(創建者/參與者)|
+  if (申請好友?) then (yes)
+    :UC3.2 申請好友;
+    
+    |EdgeSurvivor系統|
+    :建立媒合申請;
+    
+    |資料儲存|
+    :儲存媒合記錄;
+    
+    |使用者(創建者/參與者)|
+  else (no)
+  endif
+  
+  if (收到好友申請?) then (yes)
+    :UC3.3 審核好友申請;
+    
+    |EdgeSurvivor系統|
+    if (接受?) then (yes)
+      :建立好友關係;
+    else (no)
+      :拒絕申請;
+    endif
+    
+    |資料儲存|
+    :更新媒合狀態;
+    
+    |使用者(創建者/參與者)|
+  else (no)
+  endif
+  
+  :UC3.4 私訊;
+  
+  |EdgeSurvivor系統|
+  :處理訊息;
+  
+  |資料儲存|
+  :儲存訊息記錄;
+  
+  |使用者(創建者/參與者)|
+}
+
+' ========== 4. 活動參與與互動 ==========
+
+partition "活動參與" {
+  :UC4.1 活動瀏覽與篩選;
+  
+  |EdgeSurvivor系統|
+  :處理查詢條件;
+  
+  |資料儲存|
+  :查詢活動;
+  
+  |使用者(創建者/參與者)|
+  if (申請參加?) then (yes)
+    :UC4.2 申請活動;
+    
+    |EdgeSurvivor系統|
+    :建立參與申請;
+    
+    |資料儲存|
+    :儲存參與記錄;
+    
+    |使用者(創建者/參與者)|
+  else (no)
+  endif
+  
+  :UC4.3 互評;
+  
+  |EdgeSurvivor系統|
+  :驗證並儲存評價;
+  
+  |資料儲存|
+  :計算平均評分;
+  
+  |使用者(創建者/參與者)|
+  :UC4.4 費用新增;
+  
+  |EdgeSurvivor系統|
+  :新增費用記錄;
+  
+  |使用者(創建者/參與者)|
+  :UC4.5 費用分攤;
+  
+  |EdgeSurvivor系統|
+  :計算分攤方案;
+  
+  |使用者(創建者/參與者)|
+  :UC4.6 上傳照片;
+  
+  |EdgeSurvivor系統|
+  :儲存照片;
+  
+  |使用者(創建者/參與者)|
+  :UC4.7 討論區留言;
+  
+  |EdgeSurvivor系統|
+  :處理訊息;
+  
+  |資料儲存|
+  :儲存討論訊息;
+}
+
+|使用者(創建者/參與者)|
+
+if (刪除帳號?) then (yes)
+  :UC1.7 刪除帳號;
+  
+  |EdgeSurvivor系統|
+  :驗證並刪除;
+  
+  |資料儲存|
+  :級聯刪除所有資料;
+else (no)
+endif
+
+|使用者(創建者/參與者)|
+
+stop
+
+@enduml
