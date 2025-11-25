@@ -34,6 +34,9 @@
               <strong>{{ user.name }}</strong>
               <div class="user-rating">
                 <el-tag type="info" size="small">{{ user.rating_count }} 則評價</el-tag>
+                <el-tag v-if="user.average_rating > 0" type="warning" size="small" style="margin-left: 5px;">
+                  ⭐ {{ user.average_rating }}
+                </el-tag>
               </div>
             </div>
             <el-button type="primary" @click="openReviewDialog(user)">
@@ -68,8 +71,21 @@
               <strong>{{ user.name }}</strong>
               <div class="user-rating">
                 <el-tag type="info" size="small">{{ user.rating_count }} 則評價</el-tag>
+                <el-tag v-if="user.average_rating > 0" type="warning" size="small" style="margin-left: 5px;">
+                  ⭐ {{ user.average_rating }}
+                </el-tag>
               </div>
               <div class="my-review-summary">
+                <div v-if="user.my_review" style="margin-bottom: 5px;">
+                  <el-rate
+                    :model-value="user.my_review.rating"
+                    disabled
+                    show-score
+                    text-color="#ff9900"
+                    score-template="{value} 分"
+                    size="small"
+                  />
+                </div>
                 <span class="review-comment">
                   {{ user.my_review.comment }}
                 </span>
@@ -102,11 +118,28 @@
           </el-avatar>
           <div>
             <h3>{{ currentUser.name }}</h3>
-            <el-tag type="info">{{ currentUser.rating_count }} 則評價</el-tag>
+            <div style="margin-top: 5px;">
+              <el-tag type="info" size="small">{{ currentUser.rating_count }} 則評價</el-tag>
+              <el-tag v-if="currentUser.average_rating > 0" type="warning" size="small" style="margin-left: 5px;">
+                ⭐ {{ currentUser.average_rating }}
+              </el-tag>
+            </div>
           </div>
         </div>
         
         <el-form :model="reviewForm" label-width="80px" style="margin-top: 20px">
+          <el-form-item label="評分" required>
+            <el-rate
+              v-model="reviewForm.rating"
+              :max="5"
+              show-score
+              text-color="#ff9900"
+              score-template="{value} 分"
+            />
+            <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+              請選擇 1-5 星評分（必填）
+            </div>
+          </el-form-item>
           <el-form-item label="評價內容" required>
             <el-input
               v-model="reviewForm.comment"
@@ -124,7 +157,7 @@
         <el-button @click="showReviewDialog = false">取消</el-button>
         <el-button
           type="primary"
-          :disabled="!reviewForm.comment || !reviewForm.comment.trim()"
+          :disabled="!reviewForm.rating || reviewForm.rating < 1 || !reviewForm.comment || !reviewForm.comment.trim()"
           :loading="submitting"
           @click="submitReview"
         >
@@ -155,6 +188,7 @@ const currentUser = ref(null)
 const submitting = ref(false)
 
 const reviewForm = reactive({
+  rating: 0,
   comment: ''
 })
 
@@ -183,9 +217,11 @@ const openReviewDialog = (user) => {
   
   if (user.my_review) {
     // 編輯模式，填入現有評價
+    reviewForm.rating = user.my_review.rating || 0
     reviewForm.comment = user.my_review.comment || ''
   } else {
     // 新增模式，清空表單
+    reviewForm.rating = 0
     reviewForm.comment = ''
   }
   
@@ -194,6 +230,11 @@ const openReviewDialog = (user) => {
 
 // 提交評價
 const submitReview = async () => {
+  if (!reviewForm.rating || reviewForm.rating < 1 || reviewForm.rating > 5) {
+    ElMessage.warning('請選擇 1-5 星評分')
+    return
+  }
+  
   if (!reviewForm.comment || !reviewForm.comment.trim()) {
     ElMessage.warning('請填寫評價內容')
     return
@@ -204,6 +245,7 @@ const submitReview = async () => {
   try {
     await axios.post(`/activities/${props.activityId}/reviews`, {
       reviewee_id: currentUser.value.user_id,
+      rating: reviewForm.rating,
       comment: reviewForm.comment.trim()
     })
     

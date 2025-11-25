@@ -213,11 +213,11 @@ onMounted(() => {
   height: 70px;
   padding: 0 var(--spacing-xl);
   padding-top: env(safe-area-inset-top); /* iOS 安全區域 */
-  background: var(--glass-bg);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-sm);
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
   position: sticky;
   top: 0;
   left: 0;
@@ -274,19 +274,40 @@ onMounted(() => {
   margin: 0 var(--spacing-xs);
   transition: all var(--transition-base);
   position: relative;
+  padding: 0 16px !important;
+}
+
+.navbar-menu .el-menu-item::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 3px;
+  background: var(--gradient-primary);
+  border-radius: 3px 3px 0 0;
+  transition: width 0.3s ease;
 }
 
 .navbar-menu .el-menu-item:hover {
-  background: rgba(102, 126, 234, 0.1) !important;
+  background: rgba(102, 126, 234, 0.08) !important;
   color: var(--primary-color);
   transform: translateY(-2px);
 }
 
+.navbar-menu .el-menu-item:hover::before {
+  width: 60%;
+}
+
 .navbar-menu .el-menu-item.is-active {
-  background: var(--gradient-primary) !important;
-  color: white !important;
+  background: rgba(102, 126, 234, 0.1) !important;
+  color: var(--primary-color) !important;
   font-weight: 600;
-  box-shadow: var(--shadow-md);
+}
+
+.navbar-menu .el-menu-item.is-active::before {
+  width: 80%;
 }
 
 .navbar-menu .el-menu-item.is-active::after {
@@ -304,16 +325,18 @@ onMounted(() => {
   align-items: center;
   gap: var(--spacing-sm);
   cursor: pointer;
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: 8px 16px;
   border-radius: var(--radius-full);
   transition: all var(--transition-base);
-  background: rgba(102, 126, 234, 0.05);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+  border: 1px solid rgba(102, 126, 234, 0.2);
 }
 
 .user-dropdown:hover {
-  background: rgba(102, 126, 234, 0.15);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  border-color: rgba(102, 126, 234, 0.4);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
 }
 
 .username {

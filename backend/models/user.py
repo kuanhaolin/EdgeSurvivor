@@ -34,6 +34,7 @@ class User(db.Model):
     
     # 評價統計
     rating_count = db.Column(db.Integer, default=0)
+    average_rating = db.Column(db.Float, default=0.0)  # 平均評分
     
     # 關聯 - 使用字串引用避免循環匯入
     created_activities = db.relationship('Activity', backref='creator', lazy='dynamic', foreign_keys='Activity.creator_id')
@@ -75,7 +76,8 @@ class User(db.Model):
             'join_date': self.join_date.isoformat() if self.join_date else None,
             'is_verified': self.is_verified,
             'last_seen': self.last_seen.isoformat() if self.last_seen else None,
-            'rating_count': self.rating_count or 0  # 評價數量
+            'rating_count': self.rating_count or 0,  # 評價數量
+            'average_rating': round(self.average_rating or 0.0, 1)  # 平均評分，保留一位小數
         }
         
         # 根據社群隱私設定決定是否顯示社群帳號

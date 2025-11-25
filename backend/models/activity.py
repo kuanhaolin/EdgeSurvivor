@@ -10,6 +10,8 @@ class Activity(db.Model):
     date = db.Column(db.Date, nullable=False)  # 保留舊欄位以向後兼容，作為開始日期
     start_date = db.Column(db.Date)  # 活動開始日期
     end_date = db.Column(db.Date)  # 活動結束日期
+    start_time = db.Column(db.Time)  # 活動開始時間
+    end_time = db.Column(db.Time)  # 活動結束時間
     location = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     category = db.Column(db.String(50))  # adventure, culture, leisure, food, sports, etc.
@@ -46,6 +48,8 @@ class Activity(db.Model):
             'date': self.date.isoformat() if self.date else None,
             'start_date': self.start_date.isoformat() if self.start_date else (self.date.isoformat() if self.date else None),
             'end_date': self.end_date.isoformat() if self.end_date else None,
+            'start_time': self.start_time.isoformat() if self.start_time else None,
+            'end_time': self.end_time.isoformat() if self.end_time else None,
             'location': self.location,
             'description': self.description,
             'category': self.category,

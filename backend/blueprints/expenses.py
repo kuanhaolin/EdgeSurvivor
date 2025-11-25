@@ -28,10 +28,11 @@ def get_expenses(activity_id):
         
         expenses = Expense.query.filter_by(activity_id=activity_id).all()
         
-        # 計算總費用和每人應分攤金額
-        total_amount = sum(float(e.amount) for e in expenses)
+        # 計算總費用和每人平均（只計算全體平攤的費用）
         participant_count = activity.get_participant_count()
-        per_person = total_amount / participant_count if participant_count > 0 else 0
+        all_split_amount = sum(float(e.amount) for e in expenses if e.split_type == 'all')
+        total_amount = all_split_amount
+        per_person = all_split_amount / participant_count if participant_count > 0 else 0
         
         return jsonify({
             'expenses': [e.to_dict(include_details=True) for e in expenses],
@@ -64,25 +65,40 @@ def create_expense(activity_id):
         if not data.get('amount'):
             return jsonify({'error': '金額為必填'}), 400
         
+        # 獲取代墊人（付款人）
+        payer_id = data.get('payer_id', current_user_id)
+        
+        # 獲取分攤類型
+        split_type = data.get('split_type', 'all')  # all, selected, borrow
+        
         # 處理參與分攤的人員
-        participants = data.get('participants', [])
-        if not participants:
-            # 默認所有參與者
-            participants = [p.user_id for p in activity.get_participants()]
+        split_participants = data.get('split_participants', [])
+        
+        # 如果是全體分攤且未指定參與者，預設為所有參與者
+        if split_type == 'all' and not split_participants:
+            split_participants = [p.user_id for p in activity.get_participants()]
+        
+        # 借款人
+        borrower_id = data.get('borrower_id', None)
         
         expense = Expense(
             activity_id=activity_id,
-            payer_id=current_user_id,
+            payer_id=payer_id,
             amount=data['amount'],
             description=data.get('description', ''),
             category=data.get('category', 'other'),
-            is_split=data.get('is_split', True),
-            split_method=data.get('split_method', 'equal'),
-            participants=json.dumps(participants)
+            split_type=split_type,
+            is_split=(split_type != 'borrow'),  # 借款不分攤
+            split_method='equal',
+            split_participants=json.dumps(split_participants) if split_participants else None,
+            borrower_id=borrower_id
         )
         
         if data.get('expense_date'):
-            expense.expense_date = datetime.fromisoformat(data['expense_date']).date()
+            try:
+                expense.expense_date = datetime.fromisoformat(data['expense_date'].replace('Z', '+00:00')).date()
+            except:
+                expense.expense_date = datetime.fromisoformat(data['expense_date']).date()
         
         db.session.add(expense)
         db.session.commit()
@@ -94,6 +110,7 @@ def create_expense(activity_id):
         
     except Exception as e:
         db.session.rollback()
+        print(f"創建費用失敗: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @expenses_bp.route('/expenses/<int:expense_id>', methods=['DELETE'])
@@ -148,10 +165,25 @@ def get_settlement(activity_id):
         
         total_amount = 0
         for expense in expenses:
-            if expense.is_split:
+            # 處理借款邏輯（不計入 total_amount）
+            if expense.split_type == 'borrow' and expense.borrower_id:
+                # 借款人欠代墊人
+                balance[expense.borrower_id] = balance.get(expense.borrower_id, 0) - float(expense.amount)
+                balance[expense.payer_id] = balance.get(expense.payer_id, 0) + float(expense.amount)
+                # 借款不計入總費用
+                continue
+            
+            # 處理分攤邏輯
+            if expense.is_split or expense.split_type in ['all', 'selected']:
                 # 解析參與分攤的人員
                 try:
-                    split_participants = json.loads(expense.participants) if expense.participants else participant_ids
+                    split_participants = json.loads(expense.split_participants) if expense.split_participants else []
+                    # 向後兼容：如果沒有 split_participants 但有 participants
+                    if not split_participants and expense.participants:
+                        split_participants = json.loads(expense.participants)
+                    # 如果還是沒有，預設為所有參與者
+                    if not split_participants:
+                        split_participants = participant_ids
                 except:
                     split_participants = participant_ids
                 
@@ -164,7 +196,8 @@ def get_settlement(activity_id):
                     
                     # 每個參與分攤的人減少
                     for pid in split_participants:
-                        balance[pid] = balance.get(pid, 0) - per_person
+                        if pid in balance:  # 確保參與者在活動中
+                            balance[pid] = balance.get(pid, 0) - per_person
                 
                 total_amount += float(expense.amount)
         

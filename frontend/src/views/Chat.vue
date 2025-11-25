@@ -5,7 +5,7 @@
     <div class="chat-container">
       <el-row :gutter="20" class="chat-row">
         <!-- 聊天列表 -->
-        <el-col :xs="24" :md="8" class="chat-list-col">
+        <el-col :xs="24" :md="8" class="chat-list-col" :class="{ 'mobile-hidden': !showChatList && isMobile }">
           <el-card class="chat-list-card">
             <template #header>
               <div class="chat-list-header">
@@ -62,11 +62,19 @@
         </el-col>
         
         <!-- 聊天窗口 -->
-        <el-col :xs="24" :md="16" class="chat-window-col">
+        <el-col :xs="24" :md="16" class="chat-window-col" :class="{ 'mobile-hidden': showChatList && isMobile }">
           <el-card v-if="selectedChat" class="chat-window-card">
             <template #header>
               <div class="chat-window-header">
                 <div class="chat-user-info">
+                  <el-button 
+                    v-if="isMobile" 
+                    text 
+                    class="back-to-list-btn"
+                    @click="showChatList = true"
+                  >
+                    <el-icon><ArrowLeft /></el-icon>
+                  </el-button>
                   <el-avatar :size="40" :src="selectedChat.avatar" />
                   <div class="user-info">
                     <span class="user-name">{{ selectedChat.name }}</span>
@@ -113,8 +121,24 @@
                   <div v-if="message.type === 'text'" class="message-bubble">
                     {{ message.content }}
                   </div>
-                  <div v-else-if="message.type === 'image'" class="message-image">
-                    <el-image :src="message.content" fit="cover" />
+                  <div v-else-if="message.type === 'image'" class="message-image-container">
+                    <el-image 
+                      :src="message.content" 
+                      fit="cover" 
+                      :preview-src-list="[message.content]"
+                      :initial-index="0"
+                      preview-teleported
+                      class="message-image"
+                    />
+                    <el-button
+                      size="small"
+                      type="primary"
+                      class="save-image-btn"
+                      @click.stop="saveImage(message.content)"
+                    >
+                      <el-icon><Download /></el-icon>
+                      儲存
+                    </el-button>
                   </div>
                   <span class="message-time">{{ message.time }}</span>
                 </div>
@@ -232,7 +256,9 @@ import {
   ChatDotRound,
   Picture,
   Promotion,
-  Location
+  Location,
+  ArrowLeft,
+  Download
 } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
@@ -240,6 +266,19 @@ import socketService from '@/services/socket'
 
 const router = useRouter()
 const route = useRoute()
+
+// 手機版顯示控制
+const isMobile = ref(false)
+const showChatList = ref(true) // 手機版預設顯示聊天列表
+
+// 檢測是否為手機版
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 768
+  // 如果是手機版且沒有選擇聊天，顯示列表
+  if (isMobile.value && !selectedChat.value) {
+    showChatList.value = true
+  }
+}
 
 // 搜尋
 const searchQuery = ref('')
@@ -304,13 +343,22 @@ const loadMessages = async (userId) => {
     
     if (response.data && response.data.messages) {
       const currentUserId = JSON.parse(localStorage.getItem('user')).user_id
-      messages.value = response.data.messages.map(msg => ({
-        id: msg.message_id,
-        type: 'text',
-        content: msg.content,
-        time: formatTime(msg.created_at),
-        isMine: msg.sender_id === currentUserId
-      }))
+      messages.value = response.data.messages.map(msg => {
+        let content = msg.content
+        
+        // 如果是圖片訊息且 URL 是相對路徑，轉換為完整 URL
+        if (msg.message_type === 'image' && content && !content.startsWith('http')) {
+          content = `${window.location.origin}${content}`
+        }
+        
+        return {
+          id: msg.message_id,
+          type: msg.message_type || 'text',
+          content: content,
+          time: formatTime(msg.created_at),
+          isMine: msg.sender_id === currentUserId
+        }
+      })
     } else {
       // 沒有訊息記錄時，設為空陣列
       messages.value = []
@@ -379,6 +427,11 @@ const selectChat = async (chat) => {
   selectedChat.value = chat
   // 清除未讀數
   chat.unreadCount = 0
+  
+  // 手機版：選擇聊天後隱藏列表，顯示聊天窗口
+  if (isMobile.value) {
+    showChatList.value = false
+  }
   
   // 載入訊息
   loadMessages(chat.id)
@@ -525,6 +578,10 @@ const sendMessage = async () => {
 
 // 組件掛載時載入聊天列表
 onMounted(async () => {
+  // 檢測螢幕尺寸
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+  
   await loadConversations()
   
   // 連線到 Socket.IO
@@ -545,10 +602,17 @@ onMounted(async () => {
     if (selectedChat.value && message.match_id === selectedChat.value.matchId) {
       console.log('✅ 添加訊息到當前聊天室')
       const currentUserId = JSON.parse(localStorage.getItem('user')).user_id
+      
+      // 如果是圖片訊息且 URL 是相對路徑，轉換為完整 URL
+      let content = message.content
+      if (message.message_type === 'image' && content && !content.startsWith('http')) {
+        content = `${window.location.origin}${content}`
+      }
+      
       messages.value.push({
         id: message.message_id,
         type: message.message_type,
-        content: message.content,
+        content: content,
         time: formatTime(message.timestamp),
         isMine: message.sender_id === currentUserId
       })
@@ -663,6 +727,9 @@ onMounted(async () => {
 
 // 組件卸載時斷開連線
 onUnmounted(() => {
+  // 移除 resize 監聽器
+  window.removeEventListener('resize', checkMobile)
+  
   // 如果有選擇的聊天，離開聊天室
   if (selectedChat.value && selectedChat.value.matchId) {
     const currentUser = JSON.parse(localStorage.getItem('user'))
@@ -707,10 +774,148 @@ const handleImageSelect = async (event) => {
     return
   }
 
-  // TODO: 實作圖片上傳到服務器
-  // 目前只顯示檔名
-  messageInput.value += `[圖片: ${file.name}]`
-  ElMessage.info('圖片上傳功能需要後端支援，目前僅顯示檔名')
+  try {
+    // 上傳圖片到服務器
+    const formData = new FormData()
+    formData.append('image', file)
+    
+    const response = await axios.post('/upload/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    if (response.data && response.data.url) {
+      // 將相對路徑轉換為完整 URL
+      const imageUrl = response.data.url.startsWith('http') 
+        ? response.data.url 
+        : `${window.location.origin}${response.data.url}`
+      
+      // 如果已選擇聊天，直接發送圖片
+      if (selectedChat.value) {
+        await sendImageMessage(imageUrl)
+      } else {
+        ElMessage.warning('請先選擇聊天對象')
+      }
+    } else {
+      ElMessage.error('圖片上傳失敗')
+    }
+  } catch (error) {
+    console.error('上傳圖片失敗:', error)
+    ElMessage.error(error.response?.data?.error || '圖片上傳失敗')
+  }
+  
+  // 清空 input
+  event.target.value = ''
+}
+
+// 發送圖片訊息
+const sendImageMessage = async (imageUrl) => {
+  if (!selectedChat.value) {
+    ElMessage.warning('請選擇聊天對象')
+    return
+  }
+  
+  try {
+    const currentUser = JSON.parse(localStorage.getItem('user'))
+    const roomId = selectedChat.value.matchId || selectedChat.value.id
+    
+    // 使用 Socket.IO 發送圖片訊息
+    if (socketService.isConnected()) {
+      const sent = await socketService.sendMessage(
+        roomId,
+        currentUser.user_id,
+        imageUrl,
+        'image'
+      )
+      
+      if (sent && sent.message_id) {
+        const exists = messages.value.some(m => m.id === sent.message_id)
+        if (!exists) {
+          messages.value.push({
+            id: sent.message_id,
+            type: 'image',
+            content: imageUrl,
+            time: formatTime(sent.timestamp || new Date().toISOString()),
+            isMine: true
+          })
+          
+          // 滾動到底部
+          nextTick(() => {
+            if (messageScrollbar.value) {
+              messageScrollbar.value.setScrollTop(999999)
+            }
+          })
+        }
+      }
+    } else {
+      // 降級到 HTTP API
+      const response = await axios.post('/chat/messages', {
+        receiver_id: selectedChat.value.id,
+        content: imageUrl,
+        message_type: 'image'
+      })
+      
+      if (response.data && response.data.message) {
+        const newMessage = {
+          id: response.data.message.message_id,
+          type: 'image',
+          content: imageUrl,
+          time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
+          isMine: true
+        }
+        
+        messages.value.push(newMessage)
+        
+        // 更新聊天列表中的最後訊息
+        const chatIndex = chats.value.findIndex(c => c.id === selectedChat.value.id)
+        if (chatIndex !== -1) {
+          chats.value[chatIndex].lastMessage = '[圖片]'
+          chats.value[chatIndex].lastMessageTime = newMessage.time
+        }
+        
+        // 滾動到底部
+        nextTick(() => {
+          if (messageScrollbar.value) {
+            messageScrollbar.value.setScrollTop(999999)
+          }
+        })
+      }
+    }
+    
+    ElMessage.success('圖片已發送')
+  } catch (error) {
+    console.error('發送圖片失敗:', error)
+    ElMessage.error('發送圖片失敗')
+  }
+}
+
+// 儲存圖片
+const saveImage = async (imageUrl) => {
+  try {
+    // 如果是相對路徑，轉換為完整 URL
+    let fullUrl = imageUrl
+    if (imageUrl.startsWith('/')) {
+      fullUrl = `${window.location.origin}${imageUrl}`
+    }
+    
+    // 下載圖片
+    const response = await fetch(fullUrl)
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `image_${Date.now()}.${blob.type.split('/')[1] || 'jpg'}`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    ElMessage.success('圖片已儲存')
+  } catch (error) {
+    console.error('儲存圖片失敗:', error)
+    ElMessage.error('儲存圖片失敗')
+  }
 }
 
 // 查看用戶資料（導航到公開資料頁面）
@@ -810,6 +1015,7 @@ const getActivityStatusText = (status) => {
 
 .chat-row {
   height: calc(100vh - 100px);
+  position: relative;
 }
 
 .chat-list-card,
@@ -952,10 +1158,35 @@ const getActivityStatusText = (status) => {
   color: #fff;
 }
 
+.message-image-container {
+  position: relative;
+  display: inline-block;
+}
+
 .message-image {
-  width: 200px;
+  max-width: 300px;
+  max-height: 300px;
   border-radius: 8px;
   overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.message-image:hover {
+  transform: scale(1.02);
+}
+
+.save-image-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.message-image-container:hover .save-image-btn {
+  opacity: 1;
 }
 
 .message-time {
@@ -1020,17 +1251,96 @@ const getActivityStatusText = (status) => {
   color: #303133;
 }
 
+/* 手機版響應式 */
 @media (max-width: 768px) {
   .chat-container {
-    padding: 10px;
+    padding: 0;
   }
   
-  .chat-list-col {
-    display: none;
+  .chat-row {
+    height: calc(100vh - 70px);
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .chat-list-col,
+  .chat-window-col {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+  }
+  
+  .chat-list-col.mobile-hidden {
+    transform: translateX(-100%);
+    z-index: 0;
+  }
+  
+  .chat-window-col.mobile-hidden {
+    transform: translateX(100%);
+    z-index: 0;
+  }
+  
+  .chat-list-card,
+  .chat-window-card {
+    border-radius: 0;
+    height: 100%;
+    box-shadow: none;
+  }
+  
+  .chat-list-card :deep(.el-card__body) {
+    padding: 10px;
+    height: calc(100% - 60px);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .back-to-list-btn {
+    margin-right: 8px;
+    padding: 8px;
+    color: #409eff;
   }
   
   .message-content {
     max-width: 80%;
+  }
+  
+  .chat-window-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .chat-user-info {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .chat-window-header .el-button-group {
+    width: 100%;
+    margin-top: 8px;
+  }
+  
+  .chat-window-header .el-button-group .el-button {
+    flex: 1;
+  }
+  
+  .message-list {
+    height: calc(100vh - 350px) !important;
+  }
+  
+  .chat-item {
+    padding: 15px 12px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .chat-item:active {
+    background-color: #f5f7fa;
   }
 }
 </style>

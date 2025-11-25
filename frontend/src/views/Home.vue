@@ -6,14 +6,14 @@
         <h1 class="hero-title animate-slideInDown">
           <span class="gradient-text">EdgeSurvivor</span>
           <br />
-          邊緣人神器
+          <span class="subtitle-text">你的旅伴媒合平台</span>
         </h1>
         <p class="hero-subtitle animate-fadeIn">
-          🌍 不再獨自旅行，找到志同道合的旅伴
+          ✈️ 不再獨自旅行，找到志同道合的旅伴
         </p>
         <p class="hero-description">
-          一個專為獨自旅行者打造的社交平台<br />
-          讓你輕鬆找到興趣相投的夥伴，一起探索世界
+          一個專為熱愛旅行的你打造的社交平台<br />
+          輕鬆找到興趣相投的夥伴，一起探索世界的美好
         </p>
         
         <div class="actions animate-slideInUp">
@@ -31,15 +31,19 @@
         <div class="stats">
           <div class="stat-item">
             <div class="stat-number">1000+</div>
-            <div class="stat-label">活躍用戶</div>
+            <div class="stat-label">活躍旅人</div>
           </div>
           <div class="stat-item">
             <div class="stat-number">500+</div>
-            <div class="stat-label">成功活動</div>
+            <div class="stat-label">精彩旅程</div>
           </div>
           <div class="stat-item">
             <div class="stat-number">50+</div>
-            <div class="stat-label">城市覆蓋</div>
+            <div class="stat-label">城市探索</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">98%</div>
+            <div class="stat-label">滿意度</div>
           </div>
         </div>
       </div>
@@ -47,12 +51,13 @@
 
     <!-- 核心功能介紹 -->
     <section ref="featuresSection" class="features-section">
-      <div class="section-header">
-        <h2 class="section-title">核心功能</h2>
-        <p class="section-subtitle">四大核心功能，讓旅行更精彩</p>
-      </div>
-      
-      <div class="features-grid">
+      <div class="section-content">
+        <div class="section-header">
+          <h2 class="section-title">為什麼選擇 EdgeSurvivor？</h2>
+          <p class="section-subtitle">四大核心功能，讓你的每一次旅行都充滿驚喜</p>
+        </div>
+        
+        <div class="features-grid">
         <div class="feature-card glass-card" v-for="(feature, index) in features" :key="index">
           <div class="feature-icon-wrapper">
             <div class="feature-icon">{{ feature.icon }}</div>
@@ -67,16 +72,18 @@
           </ul>
         </div>
       </div>
+      </div>
     </section>
 
     <!-- 使用流程 -->
     <section class="how-it-works-section">
-      <div class="section-header">
-        <h2 class="section-title">如何使用</h2>
-        <p class="section-subtitle">簡單三步驟，開始你的冒險之旅</p>
-      </div>
-      
-      <div class="steps-container">
+      <div class="section-content">
+        <div class="section-header">
+          <h2 class="section-title">開始你的旅程</h2>
+          <p class="section-subtitle">簡單四步驟，開啟精彩的旅行冒險</p>
+        </div>
+        
+        <div class="steps-container">
         <div class="step-card" v-for="(step, index) in steps" :key="index">
           <div class="step-number">{{ index + 1 }}</div>
           <div class="step-icon">{{ step.icon }}</div>
@@ -87,16 +94,18 @@
         <!-- 連接線 -->
         <div class="step-connector" v-if="index < steps.length - 1" :key="`connector-${index}`"></div>
       </div>
+      </div>
     </section>
 
     <!-- 使用案例 -->
     <section class="use-cases-section">
-      <div class="section-header">
-        <h2 class="section-title">適合你的場景</h2>
-        <p class="section-subtitle">無論是什麼類型的活動，我們都能幫你找到夥伴</p>
-      </div>
-      
-      <div class="use-cases-grid">
+      <div class="section-content">
+        <div class="section-header">
+          <h2 class="section-title">探索各種旅行方式</h2>
+          <p class="section-subtitle">無論你喜歡什麼樣的旅行風格，都能找到志同道合的夥伴</p>
+        </div>
+        
+        <div class="use-cases-grid">
         <div class="use-case-card" v-for="(useCase, index) in useCases" :key="index">
           <div class="use-case-image">{{ useCase.emoji }}</div>
           <h3>{{ useCase.title }}</h3>
@@ -108,16 +117,18 @@
           </div>
         </div>
       </div>
+      </div>
     </section>
 
     <!-- 用戶評價 -->
     <section class="testimonials-section">
-      <div class="section-header">
-        <h2 class="section-title">用戶好評</h2>
-        <p class="section-subtitle">看看其他旅行者怎麼說</p>
-      </div>
-      
-      <div class="testimonials-grid">
+      <div class="section-content">
+        <div class="section-header">
+          <h2 class="section-title">旅人們的真實分享</h2>
+          <p class="section-subtitle">聽聽其他旅行者使用 EdgeSurvivor 的精彩體驗</p>
+        </div>
+        
+        <div class="testimonials-grid">
         <div class="testimonial-card glass-card" v-for="(testimonial, index) in testimonials" :key="index">
           <div class="testimonial-header">
             <el-avatar :size="50" :src="testimonial.avatar">
@@ -134,13 +145,14 @@
           <p class="testimonial-content">"{{ testimonial.content }}"</p>
         </div>
       </div>
+      </div>
     </section>
 
     <!-- CTA 區域 -->
     <section class="cta-section">
       <div class="cta-content">
-        <h2>準備好開始你的冒險了嗎？</h2>
-        <p>加入 EdgeSurvivor，找到你的旅行夥伴</p>
+        <h2>準備好開始你的旅行冒險了嗎？</h2>
+        <p>加入 EdgeSurvivor，找到志同道合的旅伴，一起探索世界的美好</p>
         <div class="cta-buttons">
           <el-button type="primary" size="large" @click="goToRegister" class="cta-btn">
             <el-icon><UserFilled /></el-icon>
@@ -194,47 +206,47 @@ const featuresSection = ref(null)
 // 核心功能
 const features = [
   {
-    icon: '🎯',
-    title: '活動創建與管理',
-    description: '輕鬆創建你的旅行活動',
+    icon: '🗺️',
+    title: '探索精彩活動',
+    description: '發現世界各地的旅行活動',
     items: [
-      '自由設定活動時間、地點',
-      '靈活管理參與人數',
-      '多種活動類型選擇',
-      '實時狀態更新'
+      '瀏覽豐富的活動清單',
+      '依興趣、地點篩選',
+      '查看活動詳情與參與者',
+      '一鍵加入心儀活動'
+    ]
+  },
+  {
+    icon: '✈️',
+    title: '創建你的旅程',
+    description: '發起專屬的旅行活動',
+    items: [
+      '自由規劃行程路線',
+      '設定活動時間與地點',
+      '邀請志同道合的夥伴',
+      '管理活動參與者'
     ]
   },
   {
     icon: '🤝',
-    title: '智能媒合配對',
-    description: '找到最適合的旅伴',
+    title: '智能旅伴配對',
+    description: '找到最適合的旅行夥伴',
     items: [
       '興趣標籤智能匹配',
-      '活動偏好分析',
-      '參與者背景審核',
+      '個人資料完整展示',
+      '評價系統建立信任',
       '安全可靠的配對機制'
     ]
   },
   {
     icon: '💬',
-    title: '即時聊天系統',
-    description: '隨時隨地保持聯繫',
+    title: '即時溝通協調',
+    description: '與旅伴保持緊密聯繫',
     items: [
-      '實時訊息推送',
-      '群組討論功能',
-      '多媒體訊息支援',
-      '已讀未讀狀態'
-    ]
-  },
-  {
-    icon: '📊',
-    title: '活動追蹤管理',
-    description: '掌握每個活動細節',
-    items: [
-      '費用分攤計算',
-      '行程規劃工具',
-      '參與者管理',
-      '活動歷史記錄'
+      '即時聊天功能',
+      '活動討論區',
+      '行程規劃協作',
+      '費用分攤透明化'
     ]
   }
 ]
@@ -243,18 +255,23 @@ const features = [
 const steps = [
   {
     icon: '📝',
-    title: '註冊帳號',
-    description: '快速註冊，填寫你的興趣和偏好，讓系統更了解你'
+    title: '註冊成為會員',
+    description: '快速註冊，完善個人資料，分享你的旅行興趣和偏好'
   },
   {
     icon: '🔍',
-    title: '探索活動',
-    description: '瀏覽其他用戶創建的活動，或者自己創建一個新活動'
+    title: '探索或創建活動',
+    description: '瀏覽豐富的旅行活動，或發起屬於你的專屬旅程'
+  },
+  {
+    icon: '🤝',
+    title: '找到理想旅伴',
+    description: '透過智能配對找到志同道合的夥伴，建立信任關係'
   },
   {
     icon: '🎉',
-    title: '開始冒險',
-    description: '與志同道合的夥伴一起出發，創造美好回憶'
+    title: '開始精彩旅程',
+    description: '與新朋友一起出發，創造難忘的旅行回憶'
   }
 ]
 
@@ -263,38 +280,38 @@ const useCases = [
   {
     emoji: '🏔️',
     title: '登山健行',
-    description: '找到熱愛大自然的夥伴，一起征服高山',
+    description: '找到熱愛大自然的夥伴，一起征服高山，欣賞絕美風景',
     tags: ['戶外運動', '冒險', '健康']
   },
   {
     emoji: '🏕️',
     title: '露營野炊',
-    description: '與露營愛好者分享篝火旁的美好時光',
+    description: '與露營愛好者分享篝火旁的美好時光，體驗野外生活',
     tags: ['露營', '野外', '團體活動']
   },
   {
     emoji: '✈️',
     title: '城市旅遊',
-    description: '探索新城市，與當地人或旅行者交流',
+    description: '探索新城市，與當地人或旅行者交流，深度體驗在地文化',
     tags: ['旅遊', '文化', '美食']
+  },
+  {
+    emoji: '🏖️',
+    title: '海島度假',
+    description: '尋找一起享受陽光、沙灘、海浪的旅伴',
+    tags: ['海島', '度假', '放鬆']
   },
   {
     emoji: '🍜',
     title: '美食探索',
-    description: '和吃貨們一起尋找隱藏的美味',
+    description: '和吃貨們一起尋找隱藏的美味，品嚐各地特色料理',
     tags: ['美食', '社交', '探店']
   },
   {
     emoji: '📸',
-    title: '攝影外拍',
-    description: '與攝影愛好者交流，捕捉精彩瞬間',
+    title: '攝影旅行',
+    description: '與攝影愛好者一起捕捉世界各地的精彩瞬間',
     tags: ['攝影', '藝術', '創作']
-  },
-  {
-    emoji: '🎭',
-    title: '文化體驗',
-    description: '參加展覽、音樂會等文化活動',
-    tags: ['文化', '藝術', '娛樂']
   }
 ]
 
@@ -304,17 +321,25 @@ const testimonials = [
     name: '小明',
     role: '登山愛好者',
     avatar: '',
-    content: '透過 EdgeSurvivor 找到了很多志同道合的山友，現在每個週末都有人一起爬山！'
+    content: '透過 EdgeSurvivor 找到了很多志同道合的山友，現在每個週末都有人一起爬山！一起征服了玉山、雪山等台灣百岳，每次旅程都充滿歡笑。'
   },
   {
     name: '小美',
     role: '旅遊達人',
-    content: '這個平台讓我認識了好多有趣的朋友，一起去了很多想去但不敢獨自前往的地方。'
+    avatar: '',
+    content: '這個平台讓我認識了好多有趣的朋友，一起去了日本、韓國、泰國等國家。每次旅行都因為有旅伴而變得更加精彩，也省了不少住宿和交通費用！'
   },
   {
     name: '阿傑',
     role: '攝影師',
-    content: '找到了很多攝影同好，現在每次外拍都不寂寞，還能互相學習技巧！'
+    avatar: '',
+    content: '找到了很多攝影同好，現在每次外拍都不寂寞，還能互相學習技巧！我們一起去了很多絕美的攝影景點，拍出了許多令人驚艷的作品。'
+  },
+  {
+    name: '小華',
+    role: '美食愛好者',
+    avatar: '',
+    content: '最愛和旅伴們一起探索各地美食！透過平台認識了同樣熱愛美食的朋友，一起品嚐了無數道地料理，每次旅行都像是一場美食冒險。'
   }
 ]
 
@@ -337,13 +362,18 @@ const scrollToFeatures = () => {
   min-height: -webkit-fill-available; /* iOS Safari 修復 */
   background: var(--bg-primary);
   overflow-x: hidden;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 /* ==================== Hero 區域 ==================== */
 .hero-section {
   min-height: 100vh;
   min-height: -webkit-fill-available; /* iOS Safari 修復 */
-  background: var(--gradient-primary);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -351,6 +381,14 @@ const scrollToFeatures = () => {
   padding-bottom: calc(var(--spacing-2xl) + env(safe-area-inset-bottom)); /* iOS 安全區域 */
   position: relative;
   overflow: hidden;
+  width: 100%;
+  margin: 0;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 /* 背景動畫元素 */
@@ -388,7 +426,10 @@ const scrollToFeatures = () => {
   position: relative;
   z-index: 1;
   text-align: center;
-  max-width: 900px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--spacing-xl);
 }
 
 .hero-title {
@@ -397,7 +438,7 @@ const scrollToFeatures = () => {
   color: white;
   margin-bottom: var(--spacing-md);
   line-height: 1.2;
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .gradient-text {
@@ -406,6 +447,13 @@ const scrollToFeatures = () => {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   display: inline-block;
+}
+
+.subtitle-text {
+  font-size: 48px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .hero-subtitle {
@@ -427,12 +475,14 @@ const scrollToFeatures = () => {
   display: flex;
   gap: var(--spacing-lg);
   justify-content: center;
+  align-items: center;
   margin-bottom: var(--spacing-2xl);
   flex-wrap: wrap;
 }
 
 .primary-btn {
   height: 56px;
+  min-width: 200px;
   padding: 0 var(--spacing-xl);
   font-size: 18px;
   font-weight: 600;
@@ -443,6 +493,10 @@ const scrollToFeatures = () => {
   /* iOS 觸控優化 */
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .primary-btn:hover {
@@ -452,6 +506,7 @@ const scrollToFeatures = () => {
 
 .secondary-btn {
   height: 56px;
+  min-width: 200px;
   padding: 0 var(--spacing-xl);
   font-size: 18px;
   font-weight: 600;
@@ -459,6 +514,10 @@ const scrollToFeatures = () => {
   color: white !important;
   border: 2px solid rgba(255, 255, 255, 0.3) !important;
   backdrop-filter: blur(10px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .secondary-btn:hover {
@@ -469,21 +528,30 @@ const scrollToFeatures = () => {
 
 /* 統計數據 */
 .stats {
-  display: flex;
-  justify-content: center;
-  gap: var(--spacing-2xl);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-lg);
   margin-top: var(--spacing-2xl);
-  flex-wrap: wrap;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .stat-item {
   text-align: center;
   padding: var(--spacing-lg);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(15px);
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
   min-width: 150px;
+}
+
+.stat-item:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .stat-number {
@@ -501,8 +569,15 @@ const scrollToFeatures = () => {
 /* ==================== 區塊通用樣式 ==================== */
 section {
   padding: var(--spacing-2xl) var(--spacing-xl);
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* 內容容器限制寬度 */
+.section-content {
   max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .section-header {
@@ -529,6 +604,8 @@ section {
 .features-section {
   background: var(--bg-secondary);
   padding: var(--spacing-2xl) var(--spacing-xl);
+  width: 100%;
+  margin: 0;
 }
 
 .features-grid {
@@ -602,33 +679,34 @@ section {
 /* ==================== 使用流程區 ==================== */
 .how-it-works-section {
   background: var(--bg-primary);
+  width: 100%;
+  margin: 0;
 }
 
 .steps-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: var(--spacing-xl);
-  flex-wrap: wrap;
   position: relative;
+  width: 100%;
 }
 
 .step-card {
-  flex: 1;
-  min-width: 250px;
-  max-width: 320px;
   text-align: center;
   padding: var(--spacing-xl);
-  background: var(--bg-primary);
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   transition: all var(--transition-base);
   position: relative;
+  border: 2px solid transparent;
 }
 
 .step-card:hover {
   transform: translateY(-8px);
   box-shadow: var(--shadow-xl);
+  border-color: #667eea;
+  background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%);
 }
 
 .step-number {
@@ -638,7 +716,7 @@ section {
   transform: translateX(-50%);
   width: 48px;
   height: 48px;
-  background: var(--gradient-primary);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-radius: 50%;
   display: flex;
@@ -646,7 +724,8 @@ section {
   justify-content: center;
   font-size: 24px;
   font-weight: 700;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  border: 3px solid white;
 }
 
 .step-icon {
@@ -670,6 +749,8 @@ section {
 /* ==================== 使用案例區 ==================== */
 .use-cases-section {
   background: var(--bg-secondary);
+  width: 100%;
+  margin: 0;
 }
 
 .use-cases-grid {
@@ -680,16 +761,19 @@ section {
 
 .use-case-card {
   padding: var(--spacing-xl);
-  background: var(--bg-primary);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all var(--transition-base);
   text-align: center;
+  border: 1px solid rgba(102, 126, 234, 0.1);
 }
 
 .use-case-card:hover {
   transform: translateY(-8px);
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 12px 24px rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
 }
 
 .use-case-image {
@@ -721,6 +805,8 @@ section {
 /* ==================== 用戶評價區 ==================== */
 .testimonials-section {
   background: var(--bg-primary);
+  width: 100%;
+  margin: 0;
 }
 
 .testimonials-grid {
@@ -777,16 +863,39 @@ section {
 
 /* ==================== CTA 區域 ==================== */
 .cta-section {
-  background: var(--gradient-primary);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
   padding: var(--spacing-2xl) var(--spacing-xl);
   text-align: center;
   color: white;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  margin: 0;
+}
+
+.cta-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h100v100H0z" fill="none"/><path d="M20 20h60v60H20z" fill="rgba(255,255,255,0.05)"/></svg>');
+  opacity: 0.3;
+}
+
+.cta-content {
+  position: relative;
+  z-index: 1;
 }
 
 .cta-content h2 {
   font-size: 42px;
   font-weight: 800;
   margin-bottom: var(--spacing-md);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .cta-content p {
@@ -836,6 +945,8 @@ section {
 .footer {
   background: var(--bg-tertiary);
   padding: var(--spacing-2xl) var(--spacing-xl);
+  width: 100%;
+  margin: 0;
 }
 
 .footer-content {
@@ -845,6 +956,8 @@ section {
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: var(--spacing-xl);
   margin-bottom: var(--spacing-xl);
+  width: 100%;
+  padding: 0 var(--spacing-xl);
 }
 
 .footer-section h3 {

@@ -50,6 +50,12 @@
                 <div class="stat-value">{{ userProfile.stats.reviews }}</div>
                 <div class="stat-label">評價</div>
               </div>
+              <div class="stat-item" v-if="userProfile.average_rating > 0">
+                <div class="stat-value" style="font-size: 20px; font-weight: bold; color: #ff9900;">
+                  ⭐ {{ userProfile.average_rating }}
+                </div>
+                <div class="stat-label">平均評分</div>
+              </div>
             </div>
             
             <!-- 社群帳號展示 -->
@@ -138,8 +144,8 @@
             </div>
           </el-card>
           
-          <!-- 操作按鈕 -->
-          <el-card style="margin-top: 20px;">
+          <!-- 操作按鈕（僅非自己的個人資料顯示） -->
+          <el-card v-if="!isOwnProfile" style="margin-top: 20px;">
             <el-space :size="10" wrap>
               <!-- 根據好友狀態顯示不同按鈕 -->
               <el-button 
@@ -171,6 +177,64 @@
                 發送訊息
               </el-button>
             </el-space>
+          </el-card>
+          
+          <!-- 評價列表（所有使用者都可以看到） -->
+          <el-card style="margin-top: 20px;">
+            <template #header>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>收到的評價</span>
+                <el-tag v-if="userProfile.average_rating > 0" type="warning">
+                  ⭐ 平均 {{ userProfile.average_rating }} 分 ({{ userProfile.stats.reviews }} 則評價)
+                </el-tag>
+              </div>
+            </template>
+            
+            <div v-if="loadingReviews" style="text-align: center; padding: 20px;">
+              <el-icon class="is-loading" :size="30"><Loading /></el-icon>
+              <p>載入評價中...</p>
+            </div>
+            
+            <el-space v-else direction="vertical" style="width: 100%" :size="15">
+              <el-card
+                v-for="review in userReviews"
+                :key="review.review_id"
+                shadow="hover"
+                class="review-card"
+              >
+                <div class="review-header">
+                  <div class="reviewer-info">
+                    <el-avatar :size="40" :src="review.reviewer?.avatar">
+                      {{ review.reviewer?.name?.charAt(0) }}
+                    </el-avatar>
+                    <div class="reviewer-details">
+                      <strong>{{ review.reviewer?.name || '匿名' }}</strong>
+                      <div style="font-size: 12px; color: #909399; margin-top: 2px;">
+                        {{ review.activity?.title || '一般評價' }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="review-rating">
+                    <el-rate
+                      :model-value="review.rating"
+                      disabled
+                      show-score
+                      text-color="#ff9900"
+                      score-template="{value} 分"
+                      size="small"
+                    />
+                    <div style="font-size: 12px; color: #909399; margin-top: 5px;">
+                      {{ formatDate(review.created_at) }}
+                    </div>
+                  </div>
+                </div>
+                <div class="review-comment" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ebeef5;">
+                  {{ review.comment }}
+                </div>
+              </el-card>
+            </el-space>
+            
+            <el-empty v-if="!loadingReviews && userReviews.length === 0" description="還沒有收到任何評價" />
           </el-card>
         </el-col>
       </el-row>
@@ -218,8 +282,11 @@ const router = useRouter()
 const route = useRoute()
 
 const loading = ref(true)
+const loadingReviews = ref(false)
 const showLineQRDialog = ref(false)
 const friendStatus = ref('none') // none, pending, accepted
+const userReviews = ref([])
+const isOwnProfile = ref(false) // 是否為自己的個人資料
 
 const userProfile = ref({
   name: '',
@@ -232,6 +299,7 @@ const userProfile = ref({
   verified: false,
   joinDate: '',
   interests: [],
+  average_rating: 0,
   stats: {
     activities: 0,
     matches: 0,
@@ -311,6 +379,11 @@ const checkFriendStatus = async () => {
 const loadUserProfile = async () => {
   try {
     const userId = route.params.id
+    const currentUserId = JSON.parse(localStorage.getItem('user'))?.user_id
+    
+    // 檢查是否為自己的個人資料
+    isOwnProfile.value = parseInt(userId) === parseInt(currentUserId)
+    
     const response = await axios.get(`/users/${userId}`)
     
     if (response.data && response.data.user) {
@@ -326,6 +399,7 @@ const loadUserProfile = async () => {
         verified: user.is_verified || false,
         joinDate: new Date(user.join_date).toLocaleDateString('zh-TW'),
         interests: user.interests || [],
+        average_rating: user.average_rating || 0,
         stats: {
           activities: 0,
           matches: 0,
@@ -351,10 +425,18 @@ const loadUserProfile = async () => {
           reviews: user.stats.reviews || 0
         }
       }
+      
+      // 確保平均評分被載入
+      if (user.average_rating !== undefined) {
+        userProfile.value.average_rating = user.average_rating || 0
+      }
     }
     
     // 檢查好友狀態
     await checkFriendStatus()
+    
+    // 載入評價列表
+    await loadUserReviews()
     
     loading.value = false
   } catch (error) {
@@ -362,6 +444,57 @@ const loadUserProfile = async () => {
     ElMessage.error('載入用戶資料失敗')
     loading.value = false
   }
+}
+
+// 載入使用者評價列表
+const loadUserReviews = async () => {
+  try {
+    loadingReviews.value = true
+    const userId = route.params.id
+    const response = await axios.get(`/users/${userId}/reviews`)
+    
+    console.log('評價列表 API 響應:', response.data)
+    
+    if (response.data && response.data.reviews) {
+      userReviews.value = response.data.reviews
+      console.log('載入的評價列表:', userReviews.value)
+      // 更新平均評分（如果 API 有返回）
+      if (response.data.average_rating !== undefined) {
+        userProfile.value.average_rating = response.data.average_rating
+      }
+      // 更新評價數量
+      if (response.data.rating_count !== undefined) {
+        userProfile.value.stats.reviews = response.data.rating_count
+      }
+    } else {
+      userReviews.value = []
+    }
+  } catch (error) {
+    console.error('載入評價列表失敗:', error)
+    console.error('錯誤詳情:', error.response?.data)
+    // 顯示錯誤訊息以便調試
+    if (error.response?.status === 404) {
+      console.warn('評價列表 API 不存在，可能尚未實作')
+    } else if (error.response?.status === 403) {
+      console.warn('無權限查看評價列表')
+    } else {
+      ElMessage.warning('載入評價列表時發生錯誤，請稍後再試')
+    }
+    userReviews.value = []
+  } finally {
+    loadingReviews.value = false
+  }
+}
+
+// 格式化日期
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('zh-TW', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
 }
 
 // 打開社群連結
@@ -593,9 +726,60 @@ onMounted(() => {
   min-height: 60vh;
 }
 
+.review-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.review-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.reviewer-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.reviewer-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.review-rating {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.review-comment {
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 @media (max-width: 768px) {
   .profile-container {
     padding: 10px;
+  }
+  
+  .review-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .review-rating {
+    align-items: flex-start;
   }
 }
 </style>

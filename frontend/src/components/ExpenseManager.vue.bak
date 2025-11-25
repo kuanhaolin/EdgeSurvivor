@@ -214,15 +214,13 @@
             <el-option
               v-for="participant in participantsList"
               :key="participant.user_id"
-              :label="participant.name + (participant.user_id === expenseForm.payer_id ? ' (代墊人，必選)' : '')"
+              :label="participant.name"
               :value="participant.user_id"
-              :disabled="participant.user_id === expenseForm.payer_id"
             />
           </el-select>
           <div style="margin-top: 8px; color: #909399; font-size: 12px;">
             已選擇 {{ expenseForm.split_participants.length }} 人，每人分攤：
             $ {{ calculatePerPerson(expenseForm.amount, expenseForm.split_participants.length) }}
-            <span style="color: #e6a23c;">（代墊人必須參與分攤）</span>
           </div>
         </el-form-item>
         
@@ -238,7 +236,7 @@
             style="width: 100%"
           >
             <el-option
-              v-for="participant in borrowerCandidates"
+              v-for="participant in participantsList"
               :key="participant.user_id"
               :label="participant.name"
               :value="participant.user_id"
@@ -271,7 +269,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Right, WarningFilled } from '@element-plus/icons-vue'
 import axios from '@/utils/axios'
@@ -312,30 +310,6 @@ const expenseForm = reactive({
 const currentUserId = computed(() => {
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   return user.user_id
-})
-
-// 借款人候選名單（排除代墊人自己）
-const borrowerCandidates = computed(() => {
-  if (!expenseForm.payer_id) return participantsList.value
-  return participantsList.value.filter(p => p.user_id !== expenseForm.payer_id)
-})
-
-// 監聽代墊人變更，自動調整借款人和分攤參與者
-watch(() => expenseForm.payer_id, (newPayerId, oldPayerId) => {
-  // 如果當前借款人是新的代墊人，則清空借款人選擇
-  if (expenseForm.borrower_id === newPayerId) {
-    const others = participantsList.value.filter(p => p.user_id !== newPayerId)
-    expenseForm.borrower_id = others.length > 0 ? others[0].user_id : null
-  }
-  
-  // 如果是指定參與者分攤模式，確保新代墊人在分攤列表中
-  if (expenseForm.split_type === 'selected' && newPayerId) {
-    if (!expenseForm.split_participants.includes(newPayerId)) {
-      expenseForm.split_participants.push(newPayerId)
-    }
-    // 移除舊代墊人如果需要（可選）
-    // 這裡我們保留舊代墊人在列表中，因為他們可能真的有參與
-  }
 })
 
 // 載入活動參與者
@@ -407,7 +381,7 @@ const openAddDialog = () => {
 // 處理分攤方式變更
 const handleSplitTypeChange = (value) => {
   if (value === 'selected') {
-    // 預設選擇所有人，確保包含代墊人
+    // 預設選擇所有人
     expenseForm.split_participants = participantsList.value.map(p => p.user_id)
   } else {
     expenseForm.split_participants = []
@@ -440,11 +414,6 @@ const addExpense = async () => {
   
   if (expenseForm.split_type === 'selected' && expenseForm.split_participants.length === 0) {
     ElMessage.error('請選擇至少一位參與分攤的人')
-    return
-  }
-  
-  if (expenseForm.split_type === 'selected' && !expenseForm.split_participants.includes(expenseForm.payer_id)) {
-    ElMessage.error('代墊人必須參與分攤')
     return
   }
   
@@ -485,6 +454,33 @@ const addExpense = async () => {
     console.error('新增費用失敗:', error)
     ElMessage.error(error.response?.data?.error || '新增費用失敗')
   }
+} {
+    await axios.post(`/activities/${props.activityId}/expenses`, {
+      description: expenseForm.description,
+      amount: expenseForm.amount,
+      category: expenseForm.category,
+      expense_date: expenseForm.expense_date,
+      is_split: expenseForm.is_split,
+      split_method: expenseForm.split_method
+    })
+    
+    ElMessage.success('費用已新增')
+    showAddDialog.value = false
+    
+    // 重置表單
+    expenseForm.description = ''
+    expenseForm.amount = 0
+    expenseForm.category = ''
+    expenseForm.expense_date = new Date()
+    expenseForm.is_split = true
+    
+    // 重新載入
+    await loadExpenses()
+    await loadSettlement()
+  } catch (error) {
+    console.error('新增費用失敗:', error)
+    ElMessage.error(error.response?.data?.error || '新增費用失敗')
+  }
 }
 
 // 刪除費用
@@ -514,38 +510,10 @@ const canDelete = (expense) => {
   return expense.payer_id === currentUserId.value || currentUserId.value === props.creatorId
 }
 
-// 獲取分攤參與者
-const getSplitParticipants = (expense) => {
-  try {
-    if (expense.split_participants) {
-      return typeof expense.split_participants === 'string' 
-        ? JSON.parse(expense.split_participants)
-        : expense.split_participants
-    }
-    return []
-  } catch {
-    return []
-  }
-}
-
-// 獲取分攤參與者數量
-const getSplitParticipantCount = (expense) => {
-  return getSplitParticipants(expense).length
-}
-
-// 獲取借款人名稱
-const getBorrowerName = (expense) => {
-  if (expense.borrower_id) {
-    const borrower = participantsMap.value.get(expense.borrower_id)
-    return borrower ? borrower.name : '未知'
-  }
-  return '未知'
-}
-
 // 格式化日期
 const formatDate = (dateString) => {
   if (!dateString) return '-'
-  return new Date(dateString).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
+  return new Date(dateString).toLocaleDateString('zh-TW')
 }
 
 // 獲取類別標籤類型
@@ -573,10 +541,9 @@ const getCategoryText = (category) => {
 }
 
 // 組件掛載時載入數據
-onMounted(async () => {
-  await loadParticipants()
-  await loadExpenses()
-  await loadSettlement()
+onMounted(() => {
+  loadExpenses()
+  loadSettlement()
 })
 </script>
 

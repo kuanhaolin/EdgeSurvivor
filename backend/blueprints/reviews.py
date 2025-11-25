@@ -106,7 +106,8 @@ def get_my_review_status(activity_id):
             'user_id': user.user_id,
             'name': user.name,
             'profile_picture': user.profile_picture,
-            'rating_count': user.rating_count or 0
+            'rating_count': user.rating_count or 0,
+            'average_rating': round(user.average_rating or 0.0, 1)
         }
         
         if user.user_id in reviewed_ids:
@@ -117,6 +118,7 @@ def get_my_review_status(activity_id):
                 reviewee_id=user.user_id
             ).first()
             user_data['my_review'] = {
+                'rating': review.rating,
                 'comment': review.comment,
                 'created_at': review.created_at.isoformat() if review.created_at else None
             }
@@ -126,11 +128,17 @@ def get_my_review_status(activity_id):
     
     # 檢查是否可以評價：活動必須是已完成狀態，且結束日期已過
     can_review = activity.status == 'completed'
-    if activity.end_date:
+    if not can_review:
+        print(f"🔍 [Review Check] Activity {activity_id}: status={activity.status} (not completed), can_review=False", flush=True, file=sys.stderr)
+    elif activity.end_date:
         today = date.today()
-        print(f"🔍 [Review Check] Activity {activity_id}: status={activity.status}, end_date={activity.end_date}, today={today}", flush=True, file=sys.stderr)
-        can_review = can_review and (today > activity.end_date)
-        print(f"🔍 [Review Check] can_review={can_review}", flush=True, file=sys.stderr)
+        # 結束日期必須是今天或更早（today >= end_date 表示結束日期已經到了或過了）
+        date_passed = today >= activity.end_date
+        can_review = can_review and date_passed
+        print(f"🔍 [Review Check] Activity {activity_id}: status={activity.status}, end_date={activity.end_date}, today={today}, date_passed={date_passed}, can_review={can_review}", flush=True, file=sys.stderr)
+    else:
+        # 如果沒有結束日期，只要狀態是 completed 就可以評價
+        print(f"🔍 [Review Check] Activity {activity_id}: status={activity.status}, no end_date, can_review={can_review}", flush=True, file=sys.stderr)
     
     return jsonify({
         'reviewed': reviewed,
@@ -147,10 +155,17 @@ def submit_review(activity_id):
     data = request.get_json()
     
     reviewee_id = data.get('reviewee_id')
+    rating = data.get('rating')
     comment = data.get('comment', '').strip()
     
     # 驗證必要欄位
-    if not reviewee_id or not comment:
+    if not reviewee_id:
+        return jsonify({'error': '請指定被評價者'}), 400
+    
+    if not rating or not isinstance(rating, int) or rating < 1 or rating > 5:
+        return jsonify({'error': '評分必填，且必須為 1-5 之間的整數'}), 400
+    
+    if not comment:
         return jsonify({'error': '請填寫評價內容'}), 400
     
     # 檢查活動是否存在
@@ -162,11 +177,11 @@ def submit_review(activity_id):
     if activity.status != 'completed':
         return jsonify({'error': '只有已完成的活動才能進行評價'}), 403
     
-    # 檢查結束日期
+    # 檢查結束日期（結束日期必須是今天或更早，即 today >= end_date）
     if activity.end_date:
         today = date.today()
-        if today <= activity.end_date:
-            return jsonify({'error': '活動結束後才能進行評價'}), 403
+        if today < activity.end_date:
+            return jsonify({'error': f'活動結束日期為 {activity.end_date}，需等到 {activity.end_date} 當天或之後才能進行評價'}), 403
     
     # 不能評價自己
     if reviewee_id == current_user_id:
@@ -207,6 +222,7 @@ def submit_review(activity_id):
     
     if existing_review:
         # 更新現有評價
+        existing_review.rating = rating
         existing_review.comment = comment
         review = existing_review
         message = '評價已更新'
@@ -216,6 +232,7 @@ def submit_review(activity_id):
             activity_id=activity_id,
             reviewer_id=current_user_id,
             reviewee_id=reviewee_id,
+            rating=rating,
             comment=comment
         )
         db.session.add(review)
@@ -223,20 +240,26 @@ def submit_review(activity_id):
     
     db.session.commit()
     
-    # 更新被評價者的評價數量
-    update_user_review_count(reviewee_id)
+    # 更新被評價者的評價數量與平均評分
+    update_user_rating_stats(reviewee_id)
     
     return jsonify({
         'message': message,
         'review': review.to_dict()
     }), 200
 
-# 更新用戶的評價數量
-def update_user_review_count(user_id):
-    """重新計算並更新用戶的評價數量"""
-    count = ActivityReview.query.filter_by(reviewee_id=user_id).count()
+# 更新用戶的評價數量與平均評分
+def update_user_rating_stats(user_id):
+    """重新計算並更新用戶的評價數量與平均評分"""
+    reviews = ActivityReview.query.filter_by(reviewee_id=user_id).all()
+    count = len(reviews)
     
     user = User.query.get(user_id)
     if user:
         user.rating_count = count
+        if count > 0:
+            total_rating = sum(review.rating for review in reviews)
+            user.average_rating = total_rating / count
+        else:
+            user.average_rating = 0.0
         db.session.commit()

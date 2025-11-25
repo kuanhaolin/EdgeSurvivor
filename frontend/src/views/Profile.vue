@@ -10,11 +10,13 @@
         <el-col :xs="24" :md="8">
           <el-card class="profile-card">
             <div class="avatar-section">
-              <el-avatar :size="120" :src="userProfile.avatar" />
-              <el-button type="primary" size="small" class="upload-btn" @click="uploadAvatar">
-                <el-icon><Upload /></el-icon>
-                更換頭像
-              </el-button>
+              <div class="avatar-wrapper">
+                <el-avatar :size="120" :src="userProfile.avatar" class="user-avatar" />
+                <div class="avatar-overlay" @click="uploadAvatar">
+                  <el-icon :size="24"><Camera /></el-icon>
+                  <span>更換頭像</span>
+                </div>
+              </div>
               <!-- 隱藏的文件輸入 -->
               <input
                 ref="avatarInput"
@@ -64,6 +66,19 @@
               <div class="stat-item">
                 <div class="stat-value">{{ userProfile.stats.reviews }}</div>
                 <div class="stat-label">評價</div>
+              </div>
+              <div class="stat-item" v-if="userProfile.average_rating > 0">
+                <div class="stat-value">
+                  <el-rate
+                    :model-value="userProfile.average_rating"
+                    disabled
+                    show-score
+                    text-color="#ff9900"
+                    score-template="{value}"
+                    size="small"
+                  />
+                </div>
+                <div class="stat-label">平均評分</div>
               </div>
             </div>
             
@@ -155,6 +170,14 @@
                       style="width: 100%"
                       @change="handleLocationChange"
                       filterable
+                    />
+                    <el-input
+                      v-if="showCustomLocation"
+                      v-model="customLocation"
+                      placeholder="請輸入自訂地區"
+                      style="width: 100%; margin-top: 10px;"
+                      clearable
+                      @input="editForm.location = customLocation"
                     />
                   </el-form-item>
                   
@@ -557,7 +580,8 @@ import {
   InfoFilled,
   Link,
   Right,
-  Connection
+  Connection,
+  Camera
 } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
@@ -733,12 +757,24 @@ const locationOptions = [
   }
 ]
 
+// 自訂地區輸入
+const showCustomLocation = ref(false)
+const customLocation = ref('')
+
 // 處理地區變更
 const handleLocationChange = (value) => {
   if (value && value.length === 2) {
+    // 檢查是否選擇了「其他」
+    if (value[0] === '其他') {
+      showCustomLocation.value = true
+      editForm.location = customLocation.value || ''
+    } else {
+      showCustomLocation.value = false
     // 組合為 "國家 - 城市" 格式
     editForm.location = `${value[0]} - ${value[1]}`
+    }
   } else {
+    showCustomLocation.value = false
     editForm.location = ''
   }
 }
@@ -842,6 +878,7 @@ onMounted(async () => {
         avatar: user.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
         verified: user.is_verified || false,
         joinDate: new Date(user.join_date).toLocaleDateString('zh-TW'),
+        average_rating: user.average_rating || 0,
         stats: {
           activities: 0,
           matches: 0,
@@ -893,6 +930,12 @@ onMounted(async () => {
     if (statsResponse.data && statsResponse.data.stats) {
       userProfile.value.stats.activities = statsResponse.data.stats.activities
       userProfile.value.stats.matches = statsResponse.data.stats.matches
+      userProfile.value.stats.reviews = statsResponse.data.stats.reviews || 0
+    }
+    
+    // 確保平均評分被載入（從 user 物件中）
+    if (profileResponse.data && profileResponse.data.user) {
+      userProfile.value.average_rating = profileResponse.data.user.average_rating || 0
     }
     
   } catch (error) {
@@ -1043,11 +1086,17 @@ const removeInterest = (tag) => {
 // 儲存個人資料
 const saveProfile = async () => {
   try {
+    // 如果使用自訂地區，使用自訂輸入的值
+    let finalLocation = editForm.location
+    if (showCustomLocation.value && customLocation.value) {
+      finalLocation = customLocation.value
+    }
+    
     const response = await axios.put('/users/profile', {
       name: editForm.name,
       gender: editForm.gender,
       age: editForm.age,
-      location: editForm.location,
+      location: finalLocation,
       bio: editForm.bio,
       interests: editForm.interests  // 添加興趣標籤
     })
@@ -1056,7 +1105,7 @@ const saveProfile = async () => {
       userProfile.value.name = editForm.name
       userProfile.value.gender = editForm.gender
       userProfile.value.age = editForm.age
-      userProfile.value.location = editForm.location
+      userProfile.value.location = finalLocation
       userProfile.value.bio = editForm.bio
       userProfile.value.interests = editForm.interests  // 更新興趣
       
@@ -1496,10 +1545,45 @@ const deleteAccount = async () => {
 
 .avatar-section {
   margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
 }
 
-.upload-btn {
-  margin-top: 10px;
+.avatar-wrapper {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.user-avatar {
+  transition: all 0.3s ease;
+}
+
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  color: white;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.avatar-wrapper:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.avatar-wrapper:hover .user-avatar {
+  transform: scale(1.05);
 }
 
 .user-basic-info {

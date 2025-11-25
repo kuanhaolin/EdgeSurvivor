@@ -5,6 +5,7 @@ from models.user import User
 from models.activity import Activity
 from models.match import Match
 from models.activity_participant import ActivityParticipant
+from models.activity_review import ActivityReview
 from sqlalchemy import func, or_, and_
 
 users_bp = Blueprint('users', __name__)
@@ -301,6 +302,46 @@ def get_user(user_id):
         
         return jsonify({
             'user': user_data
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@users_bp.route('/<int:user_id>/reviews', methods=['GET'])
+@jwt_required()
+def get_user_reviews(user_id):
+    """獲取使用者的評價列表（公開資料）"""
+    try:
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({'error': '找不到用戶'}), 404
+        
+        # 獲取該使用者收到的所有評價
+        reviews = ActivityReview.query.filter_by(reviewee_id=user_id).order_by(ActivityReview.created_at.desc()).all()
+        
+        # 轉換為字典格式，包含評價者資訊
+        reviews_data = []
+        for review in reviews:
+            reviewer = User.query.get(review.reviewer_id)
+            activity = Activity.query.get(review.activity_id)
+            review_dict = review.to_dict()
+            review_dict['reviewer'] = {
+                'user_id': reviewer.user_id,
+                'name': reviewer.name,
+                'avatar': reviewer.profile_picture or reviewer.avatar or 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+            } if reviewer else None
+            review_dict['activity'] = {
+                'activity_id': activity.activity_id,
+                'title': activity.title
+            } if activity else None
+            reviews_data.append(review_dict)
+        
+        return jsonify({
+            'reviews': reviews_data,
+            'total': len(reviews_data),
+            'average_rating': round(user.average_rating or 0.0, 1),
+            'rating_count': user.rating_count or 0
         }), 200
         
     except Exception as e:

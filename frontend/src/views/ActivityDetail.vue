@@ -72,14 +72,24 @@
             </el-descriptions>
             
             <!-- 動作按鈕區 -->
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
               <!-- 編輯按鈕（僅創建者） -->
               <el-button v-if="isCreator" type="primary" @click="editActivity">
                 <el-icon><Edit /></el-icon>
                 編輯活動
               </el-button>
-              <!-- 傳訊息給創建者（非創建者顯示） -->
-              <el-button v-else type="success" @click="messageCreator">
+              <!-- 刪除按鈕（僅創建者） -->
+              <el-button v-if="isCreator" type="danger" @click="deleteActivity">
+                <el-icon><Delete /></el-icon>
+                刪除活動
+              </el-button>
+              <!-- 取消參與按鈕（參與者但不是創建者） -->
+              <el-button v-if="isParticipant && !isCreator" type="warning" @click="leaveActivity">
+                <el-icon><Close /></el-icon>
+                取消參與
+              </el-button>
+              <!-- 傳訊息給創建者（非創建者且非參與者顯示） -->
+              <el-button v-if="!isCreator && !isParticipant" type="success" @click="messageCreator">
                 <el-icon><ChatDotRound /></el-icon>
                 傳訊息給創建者
               </el-button>
@@ -103,10 +113,12 @@
           <el-card>
             <el-space wrap>
               <el-card
-                v-for="participant in participants"
+                v-for="participant in sortedParticipants"
                 :key="participant.user_id"
                 shadow="hover"
                 class="participant-card"
+                style="cursor: pointer;"
+                @click="viewUserProfile(participant.user_id)"
               >
                 <div class="participant-info">
                   <el-avatar :size="60" :src="participant.avatar">
@@ -114,11 +126,11 @@
                   </el-avatar>
                   <div class="participant-details">
                     <strong>{{ participant.name }}</strong>
-                    <el-tag v-if="participant.role === 'creator'" type="success" size="small">
+                    <el-tag v-if="participant.user_id === activity.creator_id" type="warning" size="small">
                       創建者
                     </el-tag>
-                    <el-tag v-else type="info" size="small">
-                      參與者
+                    <el-tag v-else type="success" size="small">
+                      {{ getParticipantStatus(participant.status) || '參與者' }}
                     </el-tag>
                   </div>
                 </div>
@@ -257,6 +269,26 @@
           />
         </el-form-item>
         
+        <el-form-item label="活動時間">
+          <div style="display: flex; gap: 10px; width: 100%;">
+            <el-time-picker
+              v-model="editForm.start_time"
+              placeholder="開始時間"
+              format="HH:mm"
+              value-format="HH:mm"
+              style="flex: 1;"
+            />
+            <span style="line-height: 32px;">-</span>
+            <el-time-picker
+              v-model="editForm.end_time"
+              placeholder="結束時間"
+              format="HH:mm"
+              value-format="HH:mm"
+              style="flex: 1;"
+            />
+          </div>
+        </el-form-item>
+        
         <el-form-item label="人數上限" required>
           <el-input-number v-model="editForm.max_participants" :min="2" :max="50" />
         </el-form-item>
@@ -281,8 +313,8 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Edit, Plus, ArrowDown, ChatDotRound } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Edit, Plus, ArrowDown, ChatDotRound, Delete, Close } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import ActivityDiscussion from '@/components/ActivityDiscussion.vue'
 import ExpenseManager from '@/components/ExpenseManager.vue'
@@ -315,6 +347,21 @@ const isParticipant = computed(() => {
   return participants.value.some(p => p.user_id === currentUserId.value)
 })
 
+// 排序參與者：創建者排在最前面
+const sortedParticipants = computed(() => {
+  if (!participants.value || participants.value.length === 0) return []
+  
+  const creatorId = activity.value?.creator_id
+  if (!creatorId) return participants.value
+  
+  // 將參與者分為創建者和其他參與者
+  const creator = participants.value.find(p => p.user_id === creatorId)
+  const others = participants.value.filter(p => p.user_id !== creatorId)
+  
+  // 創建者在前，其他參與者在後
+  return creator ? [creator, ...others] : participants.value
+})
+
 // 創建人或參與者可以上傳照片
 const canUploadPhoto = computed(() => {
   return isCreator.value || isParticipant.value
@@ -334,6 +381,8 @@ const editForm = reactive({
   category: '',
   location: '',
   dateRange: [],
+  start_time: '09:00',
+  end_time: '17:00',
   max_participants: 5,
   description: ''
 })
@@ -379,6 +428,10 @@ const editActivity = () => {
     editForm.dateRange = []
   }
   
+  // 處理時間
+  editForm.start_time = activity.value.start_time || '09:00'
+  editForm.end_time = activity.value.end_time || '17:00'
+  
   editForm.max_participants = activity.value.max_participants
   editForm.description = activity.value.description || ''
   showEditDialog.value = true
@@ -401,6 +454,8 @@ const updateActivity = async () => {
       location: editForm.location,
       start_date: startDate.toISOString().split('T')[0],
       end_date: endDate.toISOString().split('T')[0],
+      start_time: editForm.start_time || '09:00',
+      end_time: editForm.end_time || '17:00',
       max_members: editForm.max_participants,
       description: editForm.description
     })
@@ -451,17 +506,32 @@ const formatDate = (dateString) => {
 const formatDateRange = (activity) => {
   const startDate = activity.start_date || activity.date
   const endDate = activity.end_date
+  const startTime = activity.start_time
+  const endTime = activity.end_time
   
   if (!startDate) return '待定'
   
   if (startDate && endDate) {
-    const start = new Date(startDate).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
-    const end = new Date(endDate).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const startStr = `${start.getMonth() + 1}/${start.getDate()}`
+    const endStr = `${end.getMonth() + 1}/${end.getDate()}`
     
-    if (start === end) {
-      return start
+    // 檢查是否有時間
+    if (startTime || endTime) {
+      if (start.toDateString() === end.toDateString()) {
+        // 同一天，顯示時間區間
+        return `${startStr} ${startTime || '00:00'}-${endTime || '23:59'}`
+      } else {
+        // 不同天，顯示日期和時間
+        return `${startStr} ${startTime || '00:00'} - ${endStr} ${endTime || '23:59'}`
+      }
+    }
+    
+    if (startStr === endStr) {
+      return startStr
     } else {
-      return `${start} - ${end}`
+      return `${startStr} - ${endStr}`
     }
   }
   
@@ -534,6 +604,52 @@ const handleStatusChange = async (newStatus) => {
   }
 }
 
+// 刪除活動
+const deleteActivity = async () => {
+  try {
+    await ElMessageBox.confirm('確定要刪除這個活動嗎？刪除後無法恢復。', '警告', {
+      confirmButtonText: '確定刪除',
+      cancelButtonText: '取消',
+      type: 'warning',
+      confirmButtonClass: 'el-button--danger'
+    })
+    
+    await axios.delete(`/activities/${activityId.value}`)
+    ElMessage.success('活動已刪除')
+    router.push('/activities')
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('刪除活動失敗:', error)
+      ElMessage.error(error.response?.data?.error || '刪除活動失敗')
+    }
+  }
+}
+
+// 取消參與活動
+const leaveActivity = async () => {
+  try {
+    await ElMessageBox.confirm('確定要取消參與這個活動嗎？', '提示', {
+      confirmButtonText: '確定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    await axios.post(`/activities/${activityId.value}/leave`)
+    ElMessage.success('已取消參與活動')
+    await loadActivity()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('取消參與失敗:', error)
+      ElMessage.error(error.response?.data?.error || '取消參與失敗')
+    }
+  }
+}
+
+// 查看使用者資料
+const viewUserProfile = (userId) => {
+  router.push(`/user/${userId}`)
+}
+
 // 返回
 const goBack = () => {
   router.back()
@@ -581,6 +697,12 @@ onMounted(() => {
 
 .participant-card {
   width: 200px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.participant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .participant-info {
@@ -588,6 +710,10 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 10px;
+}
+
+.participant-details strong {
+  color: #409eff;
 }
 
 .participant-details {

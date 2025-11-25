@@ -14,17 +14,43 @@
       
       <!-- 篩選條件 -->
       <el-card class="filter-card">
-        <el-form :inline="true">
+        <template #header>
+          <div class="filter-header">
+            <span class="filter-title">
+              <el-icon><Filter /></el-icon>
+              篩選條件
+            </span>
+            <div class="filter-actions">
+              <el-button size="small" text @click="resetFilters">
+                <el-icon><Refresh /></el-icon>
+                重置
+              </el-button>
+              <el-button size="small" text @click="toggleFilterCollapse">
+                <el-icon><ArrowUp v-if="!filterCollapsed" /><ArrowDown v-else /></el-icon>
+                {{ filterCollapsed ? '展開' : '收起' }}
+              </el-button>
+            </div>
+          </div>
+        </template>
+        
+        <el-collapse-transition>
+          <div v-show="!filterCollapsed">
+            <el-form :model="filters" label-width="80px" class="filter-form">
+              <el-row :gutter="20">
+                <el-col :xs="24" :sm="12" :md="8" :lg="6">
           <el-form-item label="性別">
-            <el-select v-model="filters.gender" placeholder="不限">
+                    <el-select v-model="filters.gender" placeholder="不限" clearable style="width: 100%">
               <el-option label="不限" value="" />
               <el-option label="男性" value="male" />
               <el-option label="女性" value="female" />
               <el-option label="其他" value="other" />
             </el-select>
           </el-form-item>
+                </el-col>
           
+                <el-col :xs="24" :sm="12" :md="8" :lg="6">
           <el-form-item label="年齡範圍">
+                    <div class="age-range-container">
             <el-slider
               v-model="filters.ageRange"
               range
@@ -32,14 +58,32 @@
               :max="65"
               :step="1"
               show-stops
-              style="width: 200px"
+                        :show-tooltip="true"
+                        style="flex: 1"
             />
+                      <div class="age-display">
+                        {{ filters.ageRange[0] }} - {{ filters.ageRange[1] }} 歲
+                      </div>
+                    </div>
           </el-form-item>
+                </el-col>
           
+                <el-col :xs="24" :sm="12" :md="8" :lg="6">
           <el-form-item label="地區">
-            <el-input v-model="filters.location" placeholder="例如：台北" clearable />
+                    <el-input 
+                      v-model="filters.location" 
+                      placeholder="例如：台北" 
+                      clearable 
+                      style="width: 100%"
+                    >
+                      <template #prefix>
+                        <el-icon><Location /></el-icon>
+                      </template>
+                    </el-input>
           </el-form-item>
+                </el-col>
           
+                <el-col :xs="24" :sm="12" :md="8" :lg="6">
           <el-form-item label="興趣">
             <el-select
               v-model="filters.interests"
@@ -48,7 +92,10 @@
               allow-create
               default-first-option
               placeholder="選擇或輸入興趣"
-              style="min-width: 260px"
+                      style="width: 100%"
+                      collapse-tags
+                      collapse-tags-tooltip
+                      :max-collapse-tags="2"
             >
               <el-option
                 v-for="interest in commonInterests"
@@ -58,11 +105,24 @@
               />
             </el-select>
           </el-form-item>
-
-          <el-form-item>
-            <el-switch v-model="filters.verifiedOnly" inline-prompt active-text="只看已驗證" />
+                </el-col>
+              </el-row>
+              
+              <el-row>
+                <el-col :span="24">
+                  <el-form-item label="只查看已驗證者">
+                    <el-switch 
+                      v-model="filters.verifiedOnly" 
+                      inline-prompt 
+                      active-text="是" 
+                      inactive-text="否"
+                    />
           </el-form-item>
+                </el-col>
+              </el-row>
         </el-form>
+          </div>
+        </el-collapse-transition>
       </el-card>
       
       <!-- 交友列表標籤頁 -->
@@ -78,7 +138,7 @@
               :md="8"
               :lg="6"
             >
-              <el-card class="match-card" shadow="hover">
+              <el-card class="match-card" shadow="hover" style="cursor: pointer;" @click="viewProfile(match.id)">
                 <div class="match-avatar">
                   <el-avatar :size="100" :src="match.avatar" />
                   <el-tag v-if="match.verified" type="success" size="small" class="verified-tag">
@@ -160,10 +220,10 @@
                 
                 <template #footer>
                   <el-button-group style="width: 100%">
-                    <el-button size="small" @click="viewProfile(match.id)">
+                    <el-button size="small" @click.stop="viewProfile(match.id)">
                       查看資料
                     </el-button>
-                    <el-button size="small" type="success" @click="sendMatchRequest(match.id)">
+                    <el-button size="small" type="success" @click.stop="sendMatchRequest(match.id)">
                       發送交友
                     </el-button>
                   </el-button-group>
@@ -180,9 +240,9 @@
           <el-table :data="pendingMatches" style="width: 100%">
             <el-table-column prop="name" label="姓名" width="150">
               <template #default="{ row }">
-                <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" @click="viewUserProfile(row.userId)">
                   <el-avatar :size="40" :src="row.avatar" />
-                  <span>{{ row.name }}</span>
+                  <span style="color: #409eff;">{{ row.name }}</span>
                 </div>
               </template>
             </el-table-column>
@@ -227,9 +287,9 @@
           <el-table :data="sentMatches" style="width: 100%">
             <el-table-column prop="name" label="姓名" width="150">
               <template #default="{ row }">
-                <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" @click="viewUserProfile(row.userId)">
                   <el-avatar :size="40" :src="row.avatar" />
-                  <span>{{ row.name }}</span>
+                  <span style="color: #409eff;">{{ row.name }}</span>
                 </div>
               </template>
             </el-table-column>
@@ -287,11 +347,11 @@
               :sm="12"
               :md="8"
             >
-              <el-card class="matched-card">
+              <el-card class="matched-card" style="cursor: pointer;" @click="viewProfile(match.id)">
                 <div class="matched-header">
                   <el-avatar :size="60" :src="match.avatar" />
                   <div class="matched-user-info">
-                    <h3>{{ match.name }}</h3>
+                    <h3 style="color: #409eff;">{{ match.name }}</h3>
                     <el-tag size="small" type="success">已成為好友</el-tag>
                   </div>
                 </div>
@@ -304,7 +364,7 @@
                 
                 <template #footer>
                   <el-button-group style="width: 100%">
-                    <el-button size="small" @click="viewProfile(match.id)">
+                    <el-button size="small" @click.stop="viewProfile(match.id)">
                       查看資料
                     </el-button>
                     <el-button size="small" type="primary" @click="goToChat(match.id)">
@@ -400,7 +460,11 @@ import {
   Location,
   User,
   Select,
-  ChatLineRound
+  ChatLineRound,
+  Filter,
+  Refresh,
+  ArrowUp,
+  ArrowDown
 } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
@@ -422,6 +486,26 @@ const filters = ref({
   location: '',
   interests: [],
   verifiedOnly: false
+})
+
+// 篩選列是否收起
+const filterCollapsed = ref(false)
+
+// 計算活躍的篩選條件數量
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (filters.value.gender) count++
+  if (filters.value.location) count++
+  if (filters.value.interests && filters.value.interests.length > 0) count++
+  if (filters.value.verifiedOnly) count++
+  // 年齡範圍如果不是預設值也算一個
+  if (filters.value.ageRange[0] !== 18 || filters.value.ageRange[1] !== 65) count++
+  return count
+})
+
+// 是否有活躍的篩選條件
+const hasActiveFilters = computed(() => {
+  return activeFilterCount.value > 0
 })
 
 // 常見興趣清單（可自行擴充）
@@ -643,6 +727,28 @@ const getGenderText = (gender) => {
   return texts[gender] || '未設定'
 }
 
+// 重置篩選條件
+const resetFilters = () => {
+  filters.value = {
+    gender: '',
+    ageRange: [20, 40],
+    location: '',
+    interests: [],
+    verifiedOnly: false
+  }
+  ElMessage.success('已重置篩選條件')
+}
+
+// 切換篩選列折疊狀態
+const toggleFilterCollapse = () => {
+  filterCollapsed.value = !filterCollapsed.value
+}
+
+// 清除活躍篩選標籤
+const clearActiveFilter = () => {
+  resetFilters()
+}
+
 // 返回
 const goBack = () => {
   router.back()
@@ -658,6 +764,11 @@ const findMatches = () => {
 const viewProfile = (id) => {
   // 導航到用戶資料頁面
   router.push(`/user/${id}`)
+}
+
+// 查看使用者資料（用於表格中的點擊）
+const viewUserProfile = (userId) => {
+  router.push(`/user/${userId}`)
 }
 
 // 發送媒合請求
@@ -834,8 +945,69 @@ const generateMatchLineQRCode = () => {
   margin: 20px 0;
 }
 
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.filter-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #303133;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-form {
+  padding: 10px 0;
+}
+
+.age-range-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+}
+
+.age-display {
+  min-width: 80px;
+  text-align: center;
+  font-weight: 500;
+  color: #409eff;
+  font-size: 14px;
+}
+
 .matches-tabs {
   margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .age-range-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .age-display {
+    width: 100%;
+  }
+  
+  .filter-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .filter-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
 .match-card {

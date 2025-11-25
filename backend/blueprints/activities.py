@@ -70,6 +70,23 @@ def create_activity():
         if data.get('end_date'):
             end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00')).date()
         
+        # 解析時間
+        start_time = None
+        end_time = None
+        if data.get('start_time'):
+            time_str = data['start_time']
+            # 支援 HH:MM:SS 和 HH:MM 格式
+            if len(time_str) == 8:  # HH:MM:SS
+                start_time = datetime.strptime(time_str, '%H:%M:%S').time()
+            else:  # HH:MM
+                start_time = datetime.strptime(time_str, '%H:%M').time()
+        if data.get('end_time'):
+            time_str = data['end_time']
+            if len(time_str) == 8:
+                end_time = datetime.strptime(time_str, '%H:%M:%S').time()
+            else:
+                end_time = datetime.strptime(time_str, '%H:%M').time()
+        
         activity = Activity(
             creator_id=current_user_id,
             title=data['title'],
@@ -78,6 +95,8 @@ def create_activity():
             date=start_date,  # 保留舊欄位以向後兼容
             start_date=start_date,  # 新增開始日期
             end_date=end_date,  # 新增結束日期
+            start_time=start_time,  # 新增開始時間
+            end_time=end_time,  # 新增結束時間
             max_participants=data['max_members'],  # 前端傳 max_members，後端存為 max_participants
             description=data.get('description', ''),
             status=data.get('status', 'open')  # 默認為 open（開放報名）
@@ -172,6 +191,18 @@ def update_activity(activity_id):
             activity.start_date = start_date
         if 'end_date' in data:
             activity.end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00')).date()
+        if 'start_time' in data:
+            time_str = data['start_time']
+            if len(time_str) == 8:  # HH:MM:SS
+                activity.start_time = datetime.strptime(time_str, '%H:%M:%S').time()
+            else:  # HH:MM
+                activity.start_time = datetime.strptime(time_str, '%H:%M').time()
+        if 'end_time' in data:
+            time_str = data['end_time']
+            if len(time_str) == 8:
+                activity.end_time = datetime.strptime(time_str, '%H:%M:%S').time()
+            else:
+                activity.end_time = datetime.strptime(time_str, '%H:%M').time()
         if 'max_members' in data:
             activity.max_participants = data['max_members']  # 前端傳 max_members，後端存為 max_participants
         if 'description' in data:
@@ -232,7 +263,7 @@ def join_activity(activity_id):
         if activity.creator_id == current_user_id:
             return jsonify({'error': '不能加入自己創建的活動'}), 400
         
-        # 檢查是否已參與或已申請
+        # 檢查是否已參與或已申請（pending, joined, approved）
         if activity.is_user_participant(current_user_id):
             return jsonify({'error': '您已經申請或參與此活動'}), 400
         
@@ -240,16 +271,33 @@ def join_activity(activity_id):
         if activity.get_participant_count() >= activity.max_participants:
             return jsonify({'error': '活動人數已滿'}), 400
         
-        # 創建參與申請（狀態為 pending）
-        participant = ActivityParticipant(
+        # 檢查是否存在歷史記錄（left, rejected 等狀態）
+        existing_participant = ActivityParticipant.query.filter_by(
             activity_id=activity_id,
-            user_id=current_user_id,
-            status='pending',
-            role='participant',
-            message=data.get('message', '')
-        )
-        db.session.add(participant)
-        db.session.commit()
+            user_id=current_user_id
+        ).first()
+        
+        if existing_participant:
+            # 如果存在歷史記錄，更新狀態為 pending 並重置相關欄位
+            existing_participant.status = 'pending'
+            existing_participant.message = data.get('message', '')
+            existing_participant.rejection_reason = None
+            existing_participant.left_at = None
+            existing_participant.joined_at = datetime.utcnow()
+            existing_participant.approved_at = None
+            db.session.commit()
+            participant = existing_participant
+        else:
+            # 創建新的參與申請（狀態為 pending）
+            participant = ActivityParticipant(
+                activity_id=activity_id,
+                user_id=current_user_id,
+                status='pending',
+                role='participant',
+                message=data.get('message', '')
+            )
+            db.session.add(participant)
+            db.session.commit()
         
         return jsonify({
             'message': '申請已發送，等待活動創建者審核',
@@ -376,11 +424,11 @@ def leave_activity(activity_id):
         if activity.creator_id == current_user_id:
             return jsonify({'error': '創建者不能離開活動，請刪除活動'}), 400
         
-        # 查找參與記錄
-        participant = ActivityParticipant.query.filter_by(
-            activity_id=activity_id,
-            user_id=current_user_id,
-            status='joined'
+        # 查找參與記錄（包含 approved 和 joined 狀態）
+        participant = ActivityParticipant.query.filter(
+            ActivityParticipant.activity_id == activity_id,
+            ActivityParticipant.user_id == current_user_id,
+            ActivityParticipant.status.in_(['approved', 'joined'])
         ).first()
         
         if not participant:

@@ -164,11 +164,15 @@
                 </div>
                 
                 <template #footer>
-                  <el-button-group style="width: 100%">
+                  <div class="created-activity-actions">
                     <el-button size="small" @click="viewActivity(activity.id)">
                       查看詳情
                     </el-button>
-                    <el-button size="small" type="warning" @click="viewPendingApplicants(activity.id)">
+                    <el-button 
+                      size="small" 
+                      type="warning" 
+                      @click="viewPendingApplicants(activity.id)"
+                    >
                       <el-badge :value="activity.pendingCount || 0" :hidden="!activity.pendingCount">
                         待審核
                       </el-badge>
@@ -179,7 +183,7 @@
                     <el-button size="small" type="danger" @click="deleteActivity(activity.id)">
                       刪除
                     </el-button>
-                  </el-button-group>
+                  </div>
                 </template>
               </el-card>
             </el-col>
@@ -338,6 +342,26 @@
           />
         </el-form-item>
         
+        <el-form-item label="活動時間">
+          <div style="display: flex; gap: 10px; width: 100%;">
+            <el-time-picker
+              v-model="newActivity.startTime"
+              placeholder="開始時間"
+              format="HH:mm"
+              value-format="HH:mm"
+              style="flex: 1;"
+            />
+            <span style="line-height: 32px;">-</span>
+            <el-time-picker
+              v-model="newActivity.endTime"
+              placeholder="結束時間"
+              format="HH:mm"
+              value-format="HH:mm"
+              style="flex: 1;"
+            />
+          </div>
+        </el-form-item>
+        
         <el-form-item label="人數上限" required>
           <el-input-number v-model="newActivity.maxMembers" :min="2" :max="50" />
         </el-form-item>
@@ -393,9 +417,11 @@
               :key="participant.user_id"
               :type="participant.role === 'creator' ? 'success' : 'info'"
               size="large"
+              style="cursor: pointer;"
+              @click="viewUserProfile(participant.user_id)"
             >
               <el-avatar :size="24" :src="participant.avatar" style="margin-right: 8px;" />
-              {{ participant.name }}
+              <span style="color: #409eff;">{{ participant.name }}</span>
               <span v-if="participant.role === 'creator'"> (創建者)</span>
             </el-tag>
           </el-space>
@@ -507,6 +533,8 @@ const activityForm = reactive({
   type: '',
   location: '',
   dateRange: [],  // 改為日期範圍陣列 [startDate, endDate]
+  startTime: '09:00',  // 預設開始時間
+  endTime: '17:00',    // 預設結束時間
   maxMembers: 5,
   description: ''
 })
@@ -714,6 +742,11 @@ const handleSearch = () => {
   console.log('搜尋:', searchQuery.value)
 }
 
+// 查看使用者資料
+const viewUserProfile = (userId) => {
+  router.push(`/user/${userId}`)
+}
+
 // 返回
 const goBack = () => {
   router.back()
@@ -725,7 +758,7 @@ const viewActivity = async (id) => {
 }
 
 // 編輯活動
-const editActivity = (id) => {
+const editActivity = async (id) => {
   // 找到活動
   const activity = createdActivities.value.find(a => a.id === id)
   
@@ -734,28 +767,40 @@ const editActivity = (id) => {
     return
   }
   
-  // 填充表單
-  activityForm.title = activity.title
-  activityForm.type = activity.type
-  activityForm.location = activity.location
-  
-  // 處理日期範圍
-  if (activity.startDate && activity.endDate) {
-    activityForm.dateRange = [new Date(activity.startDate), new Date(activity.endDate)]
-  } else if (activity.rawDate) {
-    // 如果只有單一日期，設為同一天
-    const date = new Date(activity.rawDate)
-    activityForm.dateRange = [date, date]
-  } else {
-    activityForm.dateRange = []
+  // 載入活動詳情以獲取時間資訊
+  try {
+    const response = await axios.get(`/activities/${id}`)
+    const fullActivity = response.data
+    
+    // 填充表單
+    activityForm.title = activity.title
+    activityForm.type = activity.type
+    activityForm.location = activity.location
+    
+    // 處理日期範圍
+    if (activity.startDate && activity.endDate) {
+      activityForm.dateRange = [new Date(activity.startDate), new Date(activity.endDate)]
+    } else if (activity.rawDate) {
+      const date = new Date(activity.rawDate)
+      activityForm.dateRange = [date, date]
+    } else {
+      activityForm.dateRange = []
+    }
+    
+    // 處理時間
+    activityForm.startTime = fullActivity.start_time || '09:00'
+    activityForm.endTime = fullActivity.end_time || '17:00'
+    
+    activityForm.maxMembers = activity.maxMembers
+    activityForm.description = activity.description
+    
+    // 設置為編輯模式
+    editingActivityId.value = id
+    showCreateDialog.value = true
+  } catch (error) {
+    console.error('載入活動詳情失敗:', error)
+    ElMessage.error('載入活動詳情失敗')
   }
-  
-  activityForm.maxMembers = activity.maxMembers
-  activityForm.description = activity.description
-  
-  // 設置為編輯模式
-  editingActivityId.value = id
-  showCreateDialog.value = true
 }
 
 // 詢問創建者（先發訊息溝通）
@@ -770,14 +815,23 @@ const messageCreator = (activity) => {
 // 刪除活動
 const deleteActivity = async (id) => {
   try {
-    await ElMessageBox.confirm('確定要刪除這個活動嗎？', '警告', {
-      confirmButtonText: '確定',
+    await ElMessageBox.confirm('確定要刪除這個活動嗎？刪除後無法恢復。', '警告', {
+      confirmButtonText: '確定刪除',
       cancelButtonText: '取消',
-      type: 'warning'
+      type: 'warning',
+      confirmButtonClass: 'el-button--danger'
     })
+    
+    await axios.delete(`/activities/${id}`)
     ElMessage.success('活動已刪除')
-  } catch {
-    // 取消刪除
+    
+    // 重新載入活動列表
+    await loadActivities()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('刪除活動失敗:', error)
+      ElMessage.error(error.response?.data?.error || '刪除活動失敗')
+    }
   }
 }
 
@@ -844,15 +898,16 @@ const approveApplicant = async (participantId) => {
 // 拒絕申請
 const rejectApplicant = async (participantId) => {
   try {
-    const { value: reason } = await ElMessageBox.prompt('請輸入拒絕原因（可選）', '拒絕申請', {
+    const result = await ElMessageBox.prompt('請輸入拒絕原因（可選）', '拒絕申請', {
       confirmButtonText: '確定',
       cancelButtonText: '取消',
       inputPlaceholder: '例如：人數已滿、不符合條件等',
       inputType: 'textarea'
-    }).catch(() => ({ value: '' }))
+    })
     
+    // 用戶點擊確定，執行拒絕操作
     await axios.post(`/activities/${currentActivityId.value}/participants/${participantId}/reject`, {
-      reason: reason || ''
+      reason: result.value || ''
     })
     ElMessage.success('已拒絕申請')
     
@@ -861,10 +916,13 @@ const rejectApplicant = async (participantId) => {
     // 重新載入活動列表
     await loadActivities()
   } catch (error) {
-    if (error !== 'cancel') {
+    // 用戶點擊取消，直接返回，不執行任何操作
+    if (error === 'cancel') {
+      return
+    }
+    // 其他錯誤才顯示錯誤訊息
       console.error('拒絕失敗:', error)
       ElMessage.error(error.response?.data?.error || '拒絕失敗')
-    }
   }
 }
 
@@ -878,37 +936,31 @@ const createActivity = async () => {
   try {
     const [startDate, endDate] = activityForm.dateRange
     
+    const activityData = {
+      title: activityForm.title,
+      type: activityForm.type,
+      location: activityForm.location,
+      start_date: startDate.toISOString().split('T')[0],
+      end_date: endDate.toISOString().split('T')[0],
+      start_time: activityForm.startTime || '09:00',
+      end_time: activityForm.endTime || '17:00',
+      max_members: activityForm.maxMembers,
+      description: activityForm.description
+    }
+    
     if (editingActivityId.value) {
       // 編輯模式
-      console.log('更新活動:', editingActivityId.value, activityForm)
-      
-      const response = await axios.put(`/activities/${editingActivityId.value}`, {
-        title: activityForm.title,
-        type: activityForm.type,
-        location: activityForm.location,
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
-        max_members: activityForm.maxMembers,
-        description: activityForm.description
-      })
-      
+      console.log('更新活動:', editingActivityId.value, activityData)
+      const response = await axios.put(`/activities/${editingActivityId.value}`, activityData)
       console.log('更新活動響應:', response.data)
       ElMessage.success('活動更新成功！')
     } else {
       // 創建模式
-      console.log('創建活動數據:', activityForm)
-      
+      console.log('創建活動數據:', activityData)
       const response = await axios.post('/activities', {
-        title: activityForm.title,
-        type: activityForm.type,
-        location: activityForm.location,
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
-        max_members: activityForm.maxMembers,
-        description: activityForm.description,
+        ...activityData,
         status: 'recruiting'
       })
-      
       console.log('創建活動響應:', response.data)
       ElMessage.success('活動創建成功！')
     }
@@ -920,6 +972,8 @@ const createActivity = async () => {
     activityForm.type = ''
     activityForm.location = ''
     activityForm.dateRange = []
+    activityForm.startTime = '09:00'
+    activityForm.endTime = '17:00'
     activityForm.maxMembers = 5
     activityForm.description = ''
     editingActivityId.value = null
@@ -1015,6 +1069,26 @@ const createActivity = async () => {
 /* 消除 Element Plus 預設的相鄰按鈕 margin-left，避免第二行看起來縮排 */
 .card-footer-actions :deep(.el-button + .el-button) {
   margin-left: 0;
+}
+
+/* 我創建的活動按鈕樣式 */
+.created-activity-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.created-activity-actions .el-button {
+  width: 100%;
+  margin: 0;
+}
+
+/* 響應式：手機版改為單欄 */
+@media (max-width: 640px) {
+  .created-activity-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* 活動詳情中的完整描述：保留使用者輸入的換行並自動換行 */

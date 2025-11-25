@@ -237,6 +237,10 @@ def create_match():
         
         print(f"[DEBUG] 目標用戶: {target_user_id}, 活動 ID: {activity_id}")
         
+        # 檢查是否為自己
+        if current_user_id == target_user_id:
+            return jsonify({'error': '不能對自己發送交友請求'}), 400
+        
         # 檢查目標用戶是否存在
         target_user = User.query.get(target_user_id)
         if not target_user:
