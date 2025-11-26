@@ -286,15 +286,20 @@ def google_code_login():
     try:
         data = request.get_json()
         code = data.get('code')
+        print(f"[Google Code Login] Received code: {code[:20] if code else None}...")
+        
         if not code:
             return jsonify({'msg': 'Missing authorization code'}), 400
 
         client_id = os.getenv('GOOGLE_CLIENT_ID')
         client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+        print(f"[Google Code Login] Client ID: {client_id[:20] if client_id else None}...")
+        
         if not client_id or not client_secret:
             return jsonify({'msg': 'Server Google OAuth config missing'}), 500
 
         # 與 Google 交換授權碼取得 tokens（使用 postmessage 做為 redirect_uri）
+        print(f"[Google Code Login] Exchanging code with Google...")
         token_resp = requests.post(
             'https://oauth2.googleapis.com/token',
             data={
@@ -306,8 +311,10 @@ def google_code_login():
             },
             timeout=10
         )
+        print(f"[Google Code Login] Token exchange status: {token_resp.status_code}")
         if token_resp.status_code != 200:
-            return jsonify({'msg': 'Failed to exchange authorization code'}), 401
+            print(f"[Google Code Login] Token exchange failed: {token_resp.text}")
+            return jsonify({'msg': 'Failed to exchange authorization code', 'details': token_resp.text}), 401
 
         token_data = token_resp.json()
         id_token = token_data.get('id_token')
@@ -352,8 +359,10 @@ def google_code_login():
             }
         })
     except Exception as e:
+        import traceback
         print(f"Google code login error: {e}")
-        return jsonify({'msg': 'Google code login failed'}), 500
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'msg': 'Google code login failed', 'error': str(e)}), 500
 
 @auth_bp.route('/forgot-password', methods=['POST'])
 def forgot_password():

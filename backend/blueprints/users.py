@@ -75,6 +75,9 @@ def get_user_stats():
         }), 200
         
     except Exception as e:
+        import traceback
+        print(f"[get_user_stats] Error: {e}")
+        print(f"[get_user_stats] Traceback: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
 @users_bp.route('/recent-activities', methods=['GET'])

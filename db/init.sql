@@ -33,6 +33,7 @@ CREATE TABLE `users` (
   `two_factor_enabled` tinyint(1) DEFAULT 0,
   `two_factor_secret` varchar(32) DEFAULT NULL,
   `rating_count` int(11) DEFAULT 0,
+  `average_rating` float DEFAULT 0.0,
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `ix_users_email` (`email`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -44,6 +45,8 @@ CREATE TABLE `activities` (
   `date` date NOT NULL,
   `start_date` date DEFAULT NULL,
   `end_date` date DEFAULT NULL,
+  `start_time` time DEFAULT NULL,
+  `end_time` time DEFAULT NULL,
   `location` varchar(200) NOT NULL,
   `description` text DEFAULT NULL,
   `category` varchar(50) DEFAULT NULL,
