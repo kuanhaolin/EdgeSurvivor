@@ -136,6 +136,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Message, Lock } from '@element-plus/icons-vue'
 import authAPI from '../api/auth'
+import { createEmailRules, createResetRules } from '../utils/forgotPasswordValidationRules'
 
 const router = useRouter()
 const emailFormRef = ref(null)
@@ -155,36 +156,8 @@ const resetForm = reactive({
   confirmPassword: ''
 })
 
-const emailRules = {
-  email: [
-    { required: true, message: '請輸入電子郵件', trigger: 'blur' },
-    { type: 'email', message: '請輸入正確的電子郵件格式', trigger: 'blur' }
-  ]
-}
-
-const validateConfirmPassword = (rule, value, callback) => {
-  if (value === '') {
-    callback(new Error('請再次輸入密碼'))
-  } else if (value !== resetForm.newPassword) {
-    callback(new Error('兩次輸入密碼不一致'))
-  } else {
-    callback()
-  }
-}
-
-const resetRules = {
-  code: [
-    { required: true, message: '請輸入驗證碼', trigger: 'blur' },
-    { len: 6, message: '驗證碼為6位數字', trigger: 'blur' }
-  ],
-  newPassword: [
-    { required: true, message: '請輸入新密碼', trigger: 'blur' },
-    { min: 6, message: '密碼長度至少 6 個字元', trigger: 'blur' }
-  ],
-  confirmPassword: [
-    { required: true, validator: validateConfirmPassword, trigger: 'blur' }
-  ]
-}
+const emailRules = createEmailRules()
+const resetRules = createResetRules(resetForm)
 
 // 發送驗證碼
 const sendVerificationCode = async () => {

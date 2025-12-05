@@ -127,10 +127,9 @@ def create_app(config_name=None):
     
     return app
 
-# 為了向後兼容，保留直接執行的方式
-app = create_app()
-
+# 只在直接執行時建立 app
 if __name__ == '__main__':
+    app = create_app()
     with app.app_context():
         db.create_all()
     # 在 Docker 開發環境中允許使用 Werkzeug

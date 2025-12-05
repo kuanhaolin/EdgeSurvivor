@@ -445,14 +445,14 @@
     
     <!-- 變更密碼對話框 -->
     <el-dialog v-model="showPasswordDialog" title="變更密碼" width="500px">
-      <el-form :model="passwordForm" label-width="100px">
-        <el-form-item label="目前密碼">
+      <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="100px">
+        <el-form-item label="目前密碼" prop="currentPassword">
           <el-input v-model="passwordForm.currentPassword" type="password" show-password />
         </el-form-item>
-        <el-form-item label="新密碼">
+        <el-form-item label="新密碼" prop="newPassword">
           <el-input v-model="passwordForm.newPassword" type="password" show-password />
         </el-form-item>
-        <el-form-item label="確認密碼">
+        <el-form-item label="確認密碼" prop="confirmPassword">
           <el-input v-model="passwordForm.confirmPassword" type="password" show-password />
         </el-form-item>
       </el-form>
@@ -585,6 +585,9 @@ import {
 } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
+import { createChangePasswordRules } from '@/utils/changePasswordValidationRules'
+import { validateImageFile } from '@/utils/imageValidation'
+import { generateLineQRCode } from '@/utils/lineQRCode'
 
 const router = useRouter()
 
@@ -854,11 +857,15 @@ const showLineQRDialog = ref(false)
 
 // 密碼變更
 const showPasswordDialog = ref(false)
+const passwordFormRef = ref(null)
 const passwordForm = reactive({
   currentPassword: '',
   newPassword: '',
   confirmPassword: ''
 })
+
+// 密碼變更驗證規則
+const passwordRules = createChangePasswordRules(passwordForm)
 
 // 載入用戶資料
 onMounted(async () => {
@@ -934,8 +941,8 @@ onMounted(async () => {
     }
     
     // 確保平均評分被載入（從 user 物件中）
-    if (profileResponse.data && profileResponse.data.user) {
-      userProfile.value.average_rating = profileResponse.data.user.average_rating || 0
+    if (response.data && response.data.user) {
+      userProfile.value.average_rating = response.data.user.average_rating || 0
     }
     
   } catch (error) {
@@ -1011,13 +1018,9 @@ const handleAvatarUpload = async (event) => {
   const file = event.target.files[0]
   if (!file) return
 
-  if (!file.type.startsWith('image/')) {
-    ElMessage.error('請選擇圖片檔案')
-    return
-  }
-
-  if (file.size > 2 * 1024 * 1024) {
-    ElMessage.error('圖片大小不能超過 2MB')
+  const validation = validateImageFile(file)
+  if (!validation.valid) {
+    ElMessage.error(validation.error)
     return
   }
 
@@ -1057,9 +1060,6 @@ const handleAvatarUpload = async (event) => {
     localStorage.setItem('user', JSON.stringify(user))
     
     ElMessage.success('頭像上傳成功！')
-    
-    // 重新載入用戶資料
-    await loadUserProfile()
   } catch (error) {
     console.error('上傳頭像失敗:', error)
     ElMessage.error('頭像上傳失敗，請重試')
@@ -1187,30 +1187,14 @@ const showLineQRCode = () => {
   
   // 等待對話框渲染後生成 QR Code
   setTimeout(() => {
-    generateLineQRCode()
+    generateQRCode()
   }, 100)
 }
 
 // 生成 LINE QR Code
-const generateLineQRCode = () => {
+const generateQRCode = () => {
   const container = document.getElementById('lineQRCode')
-  if (!container) return
-  
-  // 清空容器
-  container.innerHTML = ''
-  
-  // 使用 LINE 官方的 QR Code URL
-  const lineUrl = `https://line.me/ti/p/${encodeURIComponent(socialLinks.line)}`
-  
-  // 使用第三方 QR Code 生成服務
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(lineUrl)}`
-  
-  const img = document.createElement('img')
-  img.src = qrCodeUrl
-  img.alt = 'LINE QR Code'
-  img.style.maxWidth = '100%'
-  
-  container.appendChild(img)
+  generateLineQRCode(socialLinks.line, container)
 }
 
 // 儲存隱私設定
@@ -1262,50 +1246,42 @@ const confirmChangeEmail = async () => {
 
 // 變更密碼
 const changePassword = async () => {
-  if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-    ElMessage.error('請填寫所有欄位')
-    return
-  }
+  if (!passwordFormRef.value) return
   
-  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-    ElMessage.error('兩次輸入的密碼不一致')
-    return
-  }
-  
-  if (passwordForm.newPassword.length < 6) {
-    ElMessage.error('密碼長度至少需要 6 個字元')
-    return
-  }
-  
-  try {
-    await axios.post('/auth/change-password', {
-      old_password: passwordForm.currentPassword,
-      new_password: passwordForm.newPassword
-    })
-    
-    ElMessage.success('密碼已變更，請重新登入')
-    showPasswordDialog.value = false
-    
-    // 重置表單
-    passwordForm.currentPassword = ''
-    passwordForm.newPassword = ''
-    passwordForm.confirmPassword = ''
-    
-    // 登出並跳轉到登入頁
-    setTimeout(() => {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      router.push('/login')
-    }, 1500)
-    
-  } catch (error) {
-    console.error('變更密碼失敗:', error)
-    if (error.response?.data?.error) {
-      ElMessage.error(error.response.data.error)
-    } else {
-      ElMessage.error('變更密碼失敗')
+  await passwordFormRef.value.validate(async (valid) => {
+    if (valid) {
+      try {
+        await axios.post('/auth/change-password', {
+          old_password: passwordForm.currentPassword,
+          new_password: passwordForm.newPassword
+        })
+        
+        ElMessage.success('密碼已變更，請重新登入')
+        showPasswordDialog.value = false
+        
+        // 重置表單
+        passwordForm.currentPassword = ''
+        passwordForm.newPassword = ''
+        passwordForm.confirmPassword = ''
+        passwordFormRef.value.resetFields()
+        
+        // 登出並跳轉到登入頁
+        setTimeout(() => {
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          router.push('/login')
+        }, 1500)
+        
+      } catch (error) {
+        console.error('變更密碼失敗:', error)
+        if (error.response?.data?.error) {
+          ElMessage.error(error.response.data.error)
+        } else {
+          ElMessage.error('變更密碼失敗，請稍後再試')
+        }
+      }
     }
-  }
+  })
 }
 
 // 處理兩步驟驗證開關變化

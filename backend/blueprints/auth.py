@@ -28,6 +28,14 @@ def validate_password(password):
         return False, "密碼長度至少需要 6 個字元"
     return True, "密碼格式正確"
 
+def validate_username(name):
+    """驗證用戶名長度"""
+    if len(name) < 2:
+        return False, "用戶名至少需要 2 個字元"
+    if len(name) > 20:
+        return False, "用戶名不能超過 20 個字元"
+    return True, "用戶名格式正確"
+
 @auth_bp.route('/register', methods=['POST'])
 def register():
     """使用者註冊"""
@@ -43,6 +51,11 @@ def register():
         name = data['name'].strip()
         email = data['email'].strip().lower()
         password = data['password']
+        
+        # 驗證用戶名長度
+        is_valid, message = validate_username(name)
+        if not is_valid:
+            return jsonify({'error': message}), 400
         
         # 驗證電子郵件格式
         if not validate_email(email):

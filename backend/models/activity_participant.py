@@ -7,6 +7,7 @@ from datetime import datetime
 
 class ActivityParticipant(db.Model):
     __tablename__ = 'activity_participants'
+    __table_args__ = {'extend_existing': True}
     
     participant_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     activity_id = db.Column(db.Integer, db.ForeignKey('activities.activity_id'), nullable=False)

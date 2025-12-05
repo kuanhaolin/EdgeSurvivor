@@ -7,6 +7,7 @@ from datetime import datetime
 
 class ActivityDiscussion(db.Model):
     __tablename__ = 'activity_discussions'
+    __table_args__ = {'extend_existing': True}
     
     discussion_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     activity_id = db.Column(db.Integer, db.ForeignKey('activities.activity_id'), nullable=False)

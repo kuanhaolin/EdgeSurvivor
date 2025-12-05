@@ -3,6 +3,7 @@ from . import db
 
 class ActivityReview(db.Model):
     __tablename__ = 'activity_reviews'
+    __table_args__ = {'extend_existing': True}
     
     review_id = db.Column(db.Integer, primary_key=True)
     activity_id = db.Column(db.Integer, db.ForeignKey('activities.activity_id'), nullable=False)

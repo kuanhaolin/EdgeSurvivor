@@ -3,6 +3,7 @@ from datetime import datetime
 
 class Match(db.Model):
     __tablename__ = 'matches'
+    __table_args__ = {'extend_existing': True}
     
     match_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     activity_id = db.Column(db.Integer, db.ForeignKey('activities.activity_id'), nullable=True)  # 改為可以為 NULL

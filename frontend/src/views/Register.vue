@@ -81,6 +81,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import axios from 'axios'
+import { createRegisterRules } from '@/utils/registerValidationRules'
 
 const router = useRouter()
 const registerFormRef = ref(null)
@@ -93,33 +94,8 @@ const registerForm = reactive({
   confirmPassword: ''
 })
 
-const validatePassword = (rule, value, callback) => {
-  if (value === '') {
-    callback(new Error('請再次輸入密碼'))
-  } else if (value !== registerForm.password) {
-    callback(new Error('兩次輸入密碼不一致'))
-  } else {
-    callback()
-  }
-}
-
-const rules = {
-  name: [
-    { required: true, message: '請輸入用戶名', trigger: 'blur' },
-    { min: 2, max: 20, message: '用戶名長度在 2 到 20 個字元', trigger: 'blur' }
-  ],
-  email: [
-    { required: true, message: '請輸入電子郵件', trigger: 'blur' },
-    { type: 'email', message: '請輸入正確的電子郵件格式', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '請輸入密碼', trigger: 'blur' },
-    { min: 6, message: '密碼長度至少 6 個字元', trigger: 'blur' }
-  ],
-  confirmPassword: [
-    { required: true, validator: validatePassword, trigger: 'blur' }
-  ]
-}
+// 使用提取的驗證規則
+const rules = createRegisterRules(registerForm)
 
 const handleRegister = async () => {
   if (!registerFormRef.value) return

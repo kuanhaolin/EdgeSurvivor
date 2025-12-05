@@ -3,6 +3,7 @@ from datetime import datetime
 
 class ChatMessage(db.Model):
     __tablename__ = 'chat_messages'
+    __table_args__ = {'extend_existing': True}
     
     message_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     match_id = db.Column(db.Integer, db.ForeignKey('matches.match_id'), nullable=True)  # 改為可以為 NULL

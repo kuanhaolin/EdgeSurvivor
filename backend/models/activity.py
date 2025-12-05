@@ -4,6 +4,7 @@ from datetime import datetime
 
 class Activity(db.Model):
     __tablename__ = 'activities'
+    __table_args__ = {'extend_existing': True}
     
     activity_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(200), nullable=False)

@@ -403,3 +403,30 @@ def delete_account():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': '刪除帳號失敗: ' + str(e)}), 500
+
+# @users_bp.route('/account/delete', methods=['POST'])
+# @jwt_required()
+# def delete_account_post():
+#     """POST 方式刪除帳號，解決 DELETE body 問題"""
+#     try:
+#         current_user_id = int(get_jwt_identity())
+#         user = User.query.get(current_user_id)
+#         if not user:
+#             return jsonify({'error': '找不到使用者'}), 404
+#         data = request.get_json()
+#         password = data.get('password')
+#         if not password:
+#             return jsonify({'error': '請提供密碼以確認刪除'}), 400
+#         if not user.check_password(password):
+#             return jsonify({'error': '密碼錯誤'}), 400
+#         ActivityParticipant.query.filter_by(user_id=current_user_id).delete()
+#         Match.query.filter(
+#             or_(Match.user_a == current_user_id, Match.user_b == current_user_id)
+#         ).delete(synchronize_session=False)
+#         Activity.query.filter_by(creator_id=current_user_id).delete()
+#         db.session.delete(user)
+#         db.session.commit()
+#         return jsonify({'message': '帳號已刪除'}), 200
+#     except Exception as e:
+#         db.session.rollback()
+#         return jsonify({'error': '刪除帳號失敗: ' + str(e)}), 500
