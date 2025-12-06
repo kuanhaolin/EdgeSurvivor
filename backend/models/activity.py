@@ -40,6 +40,7 @@ class Activity(db.Model):
     # creator 關聯已在 User 模型中透過 backref 定義
     matches = db.relationship('Match', backref='activity', lazy='dynamic')
     participants = db.relationship('ActivityParticipant', backref='activity', lazy='dynamic', cascade='all, delete-orphan')
+    # discussions 關係已在 ActivityDiscussion 中透過 backref 定義，但需要手動刪除
     
     def to_dict(self, include_creator_info=False):
         """轉換為字典格式"""

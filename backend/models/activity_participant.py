@@ -58,5 +58,11 @@ class ActivityParticipant(db.Model):
         self.left_at = datetime.utcnow()
         db.session.commit()
     
+    def remove(self):
+        """被移除"""
+        self.status = 'removed'
+        self.left_at = datetime.utcnow()
+        db.session.commit()
+    
     def __repr__(self):
         return f'<ActivityParticipant user:{self.user_id} activity:{self.activity_id} status:{self.status}>'

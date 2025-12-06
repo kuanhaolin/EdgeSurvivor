@@ -69,6 +69,10 @@ def create_activity():
         end_date = None
         if data.get('end_date'):
             end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00')).date()
+            
+            # 驗證日期範圍：開始日期必須早於或等於結束日期
+            if start_date > end_date:
+                return jsonify({'error': 'start_date must be before or equal to end_date'}), 400
         
         # 解析時間
         start_time = None
@@ -149,6 +153,7 @@ def get_activity(activity_id):
             user = User.query.get(participant.user_id)
             if user:
                 activity_dict['participants'].append({
+                    'participant_id': participant.participant_id,
                     'user_id': user.user_id,
                     'name': user.name,
                     'avatar': user.profile_picture,
@@ -179,13 +184,24 @@ def update_activity(activity_id):
         
         data = request.get_json()
         
+        # 驗證必填欄位
         if 'title' in data:
+            if not data['title'] or not data['title'].strip():
+                return jsonify({'error': '標題不能為空'}), 400
             activity.title = data['title']
+        
         if 'type' in data:
+            if not data['type'] or not data['type'].strip():
+                return jsonify({'error': '類型不能為空'}), 400
             activity.category = data['type']  # 前端傳 type，後端存為 category
+        
         if 'location' in data:
+            if not data['location'] or not data['location'].strip():
+                return jsonify({'error': '地點不能為空'}), 400
             activity.location = data['location']
         if 'start_date' in data:
+            if not data['start_date'] or not data['start_date'].strip():
+                return jsonify({'error': '開始日期不能為空'}), 400
             start_date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00')).date()
             activity.date = start_date  # 保留舊欄位
             activity.start_date = start_date
@@ -204,6 +220,8 @@ def update_activity(activity_id):
             else:
                 activity.end_time = datetime.strptime(time_str, '%H:%M').time()
         if 'max_members' in data:
+            if not isinstance(data['max_members'], int) or data['max_members'] <= 0:
+                return jsonify({'error': '最大人數必須大於0'}), 400
             activity.max_participants = data['max_members']  # 前端傳 max_members，後端存為 max_participants
         if 'description' in data:
             activity.description = data['description']
@@ -239,6 +257,11 @@ def delete_activity(activity_id):
         if activity.creator_id != current_user_id:
             return jsonify({'error': '無權限刪除此活動'}), 403
         
+        # 先刪除相關的討論記錄
+        from models.activity_discussion import ActivityDiscussion
+        ActivityDiscussion.query.filter_by(activity_id=activity_id).delete()
+        
+        # 再刪除活動（participants 會因 cascade 自動刪除）
         db.session.delete(activity)
         db.session.commit()
         
@@ -439,6 +462,46 @@ def leave_activity(activity_id):
         
         return jsonify({
             'message': '已離開活動',
+            'current_participants': activity.get_participant_count()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@activities_bp.route('/<int:activity_id>/participants/<int:participant_id>', methods=['DELETE'])
+@jwt_required()
+def remove_participant(activity_id, participant_id):
+    """創建者移除參與者"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        activity = Activity.query.get(activity_id)
+        
+        if not activity:
+            return jsonify({'error': '找不到活動'}), 404
+        
+        # 驗證權限：只有創建者可以移除參與者
+        if activity.creator_id != current_user_id:
+            return jsonify({'error': '只有活動創建者可以移除參與者'}), 403
+        
+        participant = ActivityParticipant.query.get(participant_id)
+        
+        if not participant or participant.activity_id != activity_id:
+            return jsonify({'error': '找不到參與者記錄'}), 404
+        
+        # 檢查是否為創建者自己
+        if participant.user_id == current_user_id:
+            return jsonify({'error': '創建者不能移除自己'}), 400
+        
+        # 檢查參與者狀態（只能移除已加入或已批准的參與者）
+        if participant.status not in ['approved', 'joined']:
+            return jsonify({'error': '只能移除已加入的參與者'}), 400
+        
+        # 標記為已移除
+        participant.remove()
+        
+        return jsonify({
+            'message': '已移除參與者',
             'current_participants': activity.get_participant_count()
         }), 200
         
