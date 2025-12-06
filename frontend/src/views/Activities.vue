@@ -503,6 +503,7 @@ import {
 } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
+import { validateActivityForm } from '@/utils/activityValidation'
 
 const router = useRouter()
 
@@ -928,7 +929,7 @@ const rejectApplicant = async (participantId) => {
 
 // 創建/更新活動
 const createActivity = async () => {
-  if (!activityForm.title || !activityForm.type || !activityForm.location || !activityForm.dateRange || activityForm.dateRange.length !== 2) {
+  if (!validateActivityForm(activityForm)) {
     ElMessage.error('請填寫所有必填欄位')
     return
   }

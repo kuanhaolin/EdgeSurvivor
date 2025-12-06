@@ -117,10 +117,8 @@
                 :key="participant.user_id"
                 shadow="hover"
                 class="participant-card"
-                style="cursor: pointer;"
-                @click="viewUserProfile(participant.user_id)"
               >
-                <div class="participant-info">
+                <div class="participant-info" style="cursor: pointer;" @click="viewUserProfile(participant.user_id)">
                   <el-avatar :size="60" :src="participant.avatar">
                     {{ participant.name?.charAt(0) }}
                   </el-avatar>
@@ -133,6 +131,17 @@
                       {{ getParticipantStatus(participant.status) || '參與者' }}
                     </el-tag>
                   </div>
+                </div>
+                <!-- 移除按鈕（僅創建者可見且不能對自己操作） -->
+                <div v-if="isCreator && participant.user_id !== currentUserId" style="margin-top: 10px;">
+                  <el-button
+                    type="danger"
+                    size="small"
+                    @click.stop="removeParticipant(participant)"
+                  >
+                    <el-icon><Close /></el-icon>
+                    移除
+                  </el-button>
                 </div>
               </el-card>
             </el-space>
@@ -321,6 +330,7 @@ import ExpenseManager from '@/components/ExpenseManager.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
 import ActivityReviews from '@/components/ActivityReviews.vue'
 import axios from '@/utils/axios'
+import { validateActivityUpdateForm } from '@/utils/activityValidation'
 
 const route = useRoute()
 const router = useRouter()
@@ -439,8 +449,10 @@ const editActivity = () => {
 
 // 更新活動
 const updateActivity = async () => {
-  if (!editForm.dateRange || editForm.dateRange.length !== 2) {
-    ElMessage.error('請選擇活動日期')
+  // 使用統一的驗證函數
+  const validation = validateActivityUpdateForm(editForm)
+  if (!validation.valid) {
+    ElMessage.error(validation.error)
     return
   }
   
@@ -641,6 +653,39 @@ const leaveActivity = async () => {
     if (error !== 'cancel') {
       console.error('取消參與失敗:', error)
       ElMessage.error(error.response?.data?.error || '取消參與失敗')
+    }
+  }
+}
+
+// 移除參與者（僅創建者）
+const removeParticipant = async (participant) => {
+  try {
+    await ElMessageBox.confirm(
+      `確定要移除 ${participant.name} 嗎？移除後對方將無法再查看活動詳情。`,
+      '移除參與者',
+      {
+        confirmButtonText: '確定移除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+    
+    // 需要先取得 participant_id
+    // 從 participants 中找到對應的 participant_id
+    const participantRecord = participants.value.find(p => p.user_id === participant.user_id)
+    if (!participantRecord || !participantRecord.participant_id) {
+      ElMessage.error('找不到參與者記錄')
+      return
+    }
+    
+    await axios.delete(`/activities/${activityId.value}/participants/${participantRecord.participant_id}`)
+    ElMessage.success('已移除參與者')
+    await loadActivity()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('移除參與者失敗:', error)
+      ElMessage.error(error.response?.data?.error || '移除參與者失敗')
     }
   }
 }
