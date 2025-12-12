@@ -504,6 +504,12 @@ import {
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
 import { validateActivityForm } from '@/utils/activityValidation'
+import { 
+  statusMatches as statusMatchesFn, 
+  typeMatches as typeMatchesFn, 
+  textMatches as textMatchesFn,
+  filterList as filterListFn
+} from '@/utils/activityFilters'
 
 const router = useRouter()
 
@@ -652,31 +658,13 @@ onMounted(() => {
 })
 
 // ------ 搜尋與篩選（前端）------
-const normalized = (s) => (s || '').toString().toLowerCase()
-
-const statusMatches = (status) => {
-  if (!filterStatus.value) return true
-  // 將「招募中」視為 recruiting/active/open 的統稱
-  if (filterStatus.value === 'recruiting') {
-    return ['recruiting', 'active', 'open'].includes(status)
-  }
-  return status === filterStatus.value
-}
-
-const typeMatches = (type) => {
-  if (!filterType.value) return true
-  return type === filterType.value
-}
-
-const textMatches = (activity) => {
-  if (!searchQuery.value) return true
-  const q = normalized(searchQuery.value)
-  return [activity.title, activity.location, activity.description, activity.creatorName]
-    .some((f) => normalized(f).includes(q))
-}
-
+// 使用共用的篩選函數
 const filterList = (list) => {
-  return list.filter((a) => statusMatches(a.status) && typeMatches(a.type) && textMatches(a))
+  return filterListFn(list, {
+    searchQuery: searchQuery.value,
+    filterType: filterType.value,
+    filterStatus: filterStatus.value
+  })
 }
 
 // 合併所有活動（創建 + 參加）

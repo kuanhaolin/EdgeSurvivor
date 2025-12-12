@@ -32,3 +32,10 @@ def test_app():
 def client(test_app):
     """建立測試客戶端"""
     return test_app.test_client()
+
+
+@pytest.fixture
+def socketio_client(test_app):
+    """建立 SocketIO 測試客戶端"""
+    from app import socketio
+    return socketio.test_client(test_app)

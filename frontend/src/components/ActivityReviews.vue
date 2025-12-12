@@ -172,6 +172,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from '@/utils/axios'
+import { validateRating, validateComment } from '@/utils/reviewValidation'
 
 const props = defineProps({
   activityId: {
@@ -230,13 +231,16 @@ const openReviewDialog = (user) => {
 
 // 提交評價
 const submitReview = async () => {
-  if (!reviewForm.rating || reviewForm.rating < 1 || reviewForm.rating > 5) {
-    ElMessage.warning('請選擇 1-5 星評分')
+  // 使用提取的驗證函數
+  const ratingValidation = validateRating(reviewForm.rating)
+  if (!ratingValidation.valid) {
+    ElMessage.warning(ratingValidation.message)
     return
   }
   
-  if (!reviewForm.comment || !reviewForm.comment.trim()) {
-    ElMessage.warning('請填寫評價內容')
+  const commentValidation = validateComment(reviewForm.comment)
+  if (!commentValidation.valid) {
+    ElMessage.warning(commentValidation.message)
     return
   }
   

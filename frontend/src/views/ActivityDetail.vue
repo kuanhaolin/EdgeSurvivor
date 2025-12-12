@@ -225,16 +225,30 @@
     
     <!-- 上傳照片對話框 -->
     <el-dialog v-model="showUploadDialog" title="上傳照片" width="500px">
-      <ImageUploader
-        v-model="newImageUrl"
-        placeholder="點擊上傳活動照片"
-        @success="handleImageUpload"
-      />
+      <el-upload
+        ref="uploadRef"
+        :auto-upload="false"
+        :on-change="handleFileChange"
+        :show-file-list="true"
+        :limit="1"
+        accept="image/*"
+        drag
+      >
+        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+        <div class="el-upload__text">
+          拖曳檔案至此或 <em>點擊上傳</em>
+        </div>
+        <template #tip>
+          <div class="el-upload__tip">
+            支援 JPG/PNG/GIF/WEBP 格式，檔案大小不超過 5MB
+          </div>
+        </template>
+      </el-upload>
       
       <template #footer>
         <el-button @click="showUploadDialog = false">取消</el-button>
-        <el-button type="primary" :disabled="!newImageUrl" @click="addToAlbum">
-          加入相簿
+        <el-button type="primary" :disabled="!selectedFile" @click="handleImageUpload" :loading="uploading">
+          上傳
         </el-button>
       </template>
     </el-dialog>
@@ -323,7 +337,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Edit, Plus, ArrowDown, ChatDotRound, Delete, Close } from '@element-plus/icons-vue'
+import { Edit, Plus, ArrowDown, ChatDotRound, Delete, Close, UploadFilled } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import ActivityDiscussion from '@/components/ActivityDiscussion.vue'
 import ExpenseManager from '@/components/ExpenseManager.vue'
@@ -331,6 +345,7 @@ import ImageUploader from '@/components/ImageUploader.vue'
 import ActivityReviews from '@/components/ActivityReviews.vue'
 import axios from '@/utils/axios'
 import { validateActivityUpdateForm } from '@/utils/activityValidation'
+import { validateImageFile } from '@/utils/imageValidation'
 
 const route = useRoute()
 const router = useRouter()
@@ -342,6 +357,9 @@ const participants = ref([])
 const showUploadDialog = ref(false)
 const showEditDialog = ref(false)
 const newImageUrl = ref('')
+const selectedFile = ref(null)
+const uploading = ref(false)
+const uploadRef = ref(null)
 
 const currentUserId = computed(() => {
   const user = JSON.parse(localStorage.getItem('user') || '{}')
@@ -481,12 +499,49 @@ const updateActivity = async () => {
   }
 }
 
-// 處理圖片上傳
-const handleImageUpload = (url) => {
-  newImageUrl.value = url
+// 處理文件選擇
+const handleFileChange = (file, fileList) => {
+  const validation = validateImageFile(file?.raw)
+  if (!validation.valid) {
+    ElMessage.error(validation.error)
+    selectedFile.value = null
+    // 清除 el-upload 的檔案列表
+    if (uploadRef.value) {
+      uploadRef.value.clearFiles()
+    }
+    return
+  }
+  selectedFile.value = file.raw
 }
 
-// 加入相簿
+// 處理圖片上傳
+const handleImageUpload = async () => {
+  if (!selectedFile.value) return
+  
+  try {
+    uploading.value = true
+    const formData = new FormData()
+    formData.append('image', selectedFile.value)
+    
+    const response = await axios.post(`/activities/${activityId.value}/photos`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    ElMessage.success('照片上傳成功')
+    showUploadDialog.value = false
+    selectedFile.value = null
+    await loadActivity()
+  } catch (error) {
+    console.error('上傳照片失敗:', error)
+    ElMessage.error(error.response?.data?.error || '上傳照片失敗')
+  } finally {
+    uploading.value = false
+  }
+}
+
+// 加入相簿 (已廢棄 - 使用 handleImageUpload)
 const addToAlbum = async () => {
   if (!newImageUrl.value) return
   

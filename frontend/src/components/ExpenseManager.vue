@@ -275,6 +275,15 @@ import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Right, WarningFilled } from '@element-plus/icons-vue'
 import axios from '@/utils/axios'
+import { 
+  validateDescription, 
+  validateAmount, 
+  validateCategory, 
+  validatePayerId,
+  validateSplitType,
+  validateSplitParticipants,
+  validateBorrowerId
+} from '@/utils/expenseValidation'
 
 const props = defineProps({
   activityId: {
@@ -433,23 +442,49 @@ const calculatePerPerson = (amount, count) => {
 // 新增費用
 const addExpense = async () => {
   // 驗證必填欄位
-  if (!expenseForm.description || !expenseForm.amount || !expenseForm.category || !expenseForm.payer_id) {
-    ElMessage.error('請填寫所有必填欄位')
+  const descResult = validateDescription(expenseForm.description)
+  if (!descResult.valid) {
+    ElMessage.error(descResult.message)
     return
   }
   
-  if (expenseForm.split_type === 'selected' && expenseForm.split_participants.length === 0) {
-    ElMessage.error('請選擇至少一位參與分攤的人')
+  const amountResult = validateAmount(expenseForm.amount)
+  if (!amountResult.valid) {
+    ElMessage.error(amountResult.message)
     return
   }
   
-  if (expenseForm.split_type === 'selected' && !expenseForm.split_participants.includes(expenseForm.payer_id)) {
-    ElMessage.error('代墊人必須參與分攤')
+  const categoryResult = validateCategory(expenseForm.category)
+  if (!categoryResult.valid) {
+    ElMessage.error(categoryResult.message)
     return
   }
   
-  if (expenseForm.split_type === 'borrow' && !expenseForm.borrower_id) {
-    ElMessage.error('請選擇借款人')
+  const payerResult = validatePayerId(expenseForm.payer_id)
+  if (!payerResult.valid) {
+    ElMessage.error(payerResult.message)
+    return
+  }
+  
+  const splitTypeResult = validateSplitType(expenseForm.split_type)
+  if (!splitTypeResult.valid) {
+    ElMessage.error(splitTypeResult.message)
+    return
+  }
+  
+  const splitParticipantsResult = validateSplitParticipants(
+    expenseForm.split_participants, 
+    expenseForm.split_type, 
+    expenseForm.payer_id
+  )
+  if (!splitParticipantsResult.valid) {
+    ElMessage.error(splitParticipantsResult.message)
+    return
+  }
+  
+  const borrowerResult = validateBorrowerId(expenseForm.borrower_id, expenseForm.split_type)
+  if (!borrowerResult.valid) {
+    ElMessage.error(borrowerResult.message)
     return
   }
   

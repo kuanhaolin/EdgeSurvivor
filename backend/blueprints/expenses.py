@@ -6,6 +6,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db
 from models.activity import Activity
 from models.expense import Expense
+from models.user import User
 from datetime import datetime
 import json
 
@@ -62,17 +63,45 @@ def create_expense(activity_id):
         if not activity.is_user_participant(current_user_id) and activity.creator_id != current_user_id:
             return jsonify({'error': '只有活動參與者可以添加費用'}), 403
         
-        if not data.get('amount'):
-            return jsonify({'error': '金額為必填'}), 400
+        # 驗證必填欄位
+        description = data.get('description', '').strip()
+        if not description:
+            return jsonify({'error': '費用項目為必填'}), 400
+        
+        amount = data.get('amount')
+        if not amount or amount <= 0:
+            return jsonify({'error': '金額必須大於0'}), 400
+        
+        category = data.get('category', '').strip()
+        valid_categories = ['transport', 'accommodation', 'food', 'ticket', 'other']
+        if not category or category not in valid_categories:
+            return jsonify({'error': '請選擇有效的類別'}), 400
         
         # 獲取代墊人（付款人）
-        payer_id = data.get('payer_id', current_user_id)
+        payer_id = data.get('payer_id')
+        if not payer_id:
+            return jsonify({'error': '請選擇代墊人'}), 400
+        
+        # 驗證代墊人是否存在
+        payer = User.query.get(payer_id)
+        if not payer:
+            return jsonify({'error': '代墊人不存在'}), 404
         
         # 獲取分攤類型
-        split_type = data.get('split_type', 'all')  # all, selected, borrow
+        split_type = data.get('split_type', '').strip()
+        valid_split_types = ['all', 'selected', 'borrow']
+        if not split_type or split_type not in valid_split_types:
+            return jsonify({'error': '請選擇有效的分攤方式'}), 400
         
         # 處理參與分攤的人員
         split_participants = data.get('split_participants', [])
+        
+        # 如果是 selected 模式，必須有參與者且包含代墊人
+        if split_type == 'selected':
+            if not split_participants or len(split_participants) == 0:
+                return jsonify({'error': '請選擇至少一位參與分攤的人'}), 400
+            if payer_id not in split_participants:
+                return jsonify({'error': '代墊人必須參與分攤'}), 400
         
         # 如果是全體分攤且未指定參與者，預設為所有參與者
         if split_type == 'all' and not split_participants:
@@ -80,13 +109,20 @@ def create_expense(activity_id):
         
         # 借款人
         borrower_id = data.get('borrower_id', None)
+        if split_type == 'borrow':
+            if not borrower_id:
+                return jsonify({'error': '請選擇借款人'}), 400
+            # 驗證借款人是否存在
+            borrower = User.query.get(borrower_id)
+            if not borrower:
+                return jsonify({'error': '借款人不存在'}), 404
         
         expense = Expense(
             activity_id=activity_id,
             payer_id=payer_id,
-            amount=data['amount'],
-            description=data.get('description', ''),
-            category=data.get('category', 'other'),
+            amount=amount,
+            description=description,
+            category=category,
             split_type=split_type,
             is_split=(split_type != 'borrow'),  # 借款不分攤
             split_method='equal',

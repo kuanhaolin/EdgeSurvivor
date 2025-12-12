@@ -110,7 +110,7 @@
               
               <el-row>
                 <el-col :span="24">
-                  <el-form-item label="只查看已驗證者">
+                  <el-form-item label="已驗證">
                     <el-switch 
                       v-model="filters.verifiedOnly" 
                       inline-prompt 
@@ -468,6 +468,7 @@ import {
 } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
+import { applyMatchFilters, getDefaultFilters } from '@/utils/matchFilters'
 
 const router = useRouter()
 
@@ -519,28 +520,9 @@ const commonInterests = [
 // 推薦媒合（原始資料）
 const recommendedMatches = ref([])
 
-// 依前端條件進行即時篩選
+// 依前端條件進行即時篩選 (使用獨立的篩選邏輯)
 const filteredRecommendedMatches = computed(() => {
-  const gender = filters.value.gender
-  const [minAge, maxAge] = filters.value.ageRange || [18, 65]
-  const location = (filters.value.location || '').toLowerCase()
-  const interests = filters.value.interests || []
-  const verifiedOnly = !!filters.value.verifiedOnly
-
-  return recommendedMatches.value.filter((m) => {
-    if (gender && m.gender !== gender) return false
-    if (typeof m.age === 'number') {
-      if (m.age < minAge || m.age > maxAge) return false
-    }
-    if (location && !(m.location || '').toLowerCase().includes(location)) return false
-    if (verifiedOnly && !m.verified) return false
-    if (interests.length > 0) {
-      const set = new Set((m.interests || []).map(String))
-      const hasAny = interests.some((i) => set.has(String(i)))
-      if (!hasAny) return false
-    }
-    return true
-  })
+  return applyMatchFilters(recommendedMatches.value, filters.value)
 })
 
 // 待回應媒合
@@ -729,13 +711,7 @@ const getGenderText = (gender) => {
 
 // 重置篩選條件
 const resetFilters = () => {
-  filters.value = {
-    gender: '',
-    ageRange: [20, 40],
-    location: '',
-    interests: [],
-    verifiedOnly: false
-  }
+  filters.value = getDefaultFilters()
   ElMessage.success('已重置篩選條件')
 }
 

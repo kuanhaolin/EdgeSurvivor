@@ -1,10 +1,14 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from werkzeug.utils import secure_filename
 from models import db
 from models.activity import Activity
 from models.user import User
 from models.activity_participant import ActivityParticipant
 from datetime import datetime
+import os
+import uuid
+import json
 
 activities_bp = Blueprint('activities', __name__)
 
@@ -508,3 +512,92 @@ def remove_participant(activity_id, participant_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@activities_bp.route('/<int:activity_id>/photos', methods=['POST'])
+@jwt_required()
+def upload_activity_photo(activity_id):
+    """上傳活動照片（只有參與者可以上傳）"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        # 檢查活動是否存在
+        activity = Activity.query.get(activity_id)
+        if not activity:
+            return jsonify({'error': '找不到活動'}), 404
+        
+        # 檢查是否為已批准的參與者（不包含 pending）
+        participant = ActivityParticipant.query.filter_by(
+            activity_id=activity_id,
+            user_id=current_user_id
+        ).filter(
+            ActivityParticipant.status.in_(['joined', 'approved'])
+        ).first()
+        
+        is_creator = activity.creator_id == current_user_id
+        
+        if not participant and not is_creator:
+            return jsonify({'error': '只有活動參與者可以上傳照片'}), 403
+        
+        # 檢查是否有文件
+        if 'image' not in request.files:
+            return jsonify({'error': '沒有選擇文件'}), 400
+        
+        file = request.files['image']
+        
+        if file.filename == '':
+            return jsonify({'error': '沒有選擇文件'}), 400
+        
+        # 檢查文件類型
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        if '.' not in file.filename or \
+           file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+            return jsonify({'error': '不支持的文件類型，只允許 PNG、JPG、JPEG、GIF、WEBP'}), 400
+        
+        # 檢查文件大小 (5MB)
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        
+        max_size = 5 * 1024 * 1024  # 5MB
+        if file_size > max_size:
+            return jsonify({'error': '文件大小超過限制（最大 5MB）'}), 400
+        
+        # 確保上傳目錄存在
+        upload_folder = 'uploads/activities'
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder)
+        
+        # 生成唯一文件名
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        filename = f"{activity_id}_{current_user_id}_{uuid.uuid4().hex}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{ext}"
+        
+        # 保存文件
+        filepath = os.path.join(upload_folder, filename)
+        file.save(filepath)
+        
+        # 獲取當前照片列表
+        current_images = []
+        if activity.images:
+            try:
+                current_images = json.loads(activity.images)
+            except:
+                current_images = []
+        
+        # 添加新照片URL
+        new_url = f"/uploads/activities/{filename}"
+        current_images.append(new_url)
+        
+        # 更新活動
+        activity.images = json.dumps(current_images)
+        db.session.commit()
+        
+        return jsonify({
+            'message': '照片上傳成功',
+            'url': new_url,
+            'total_photos': len(current_images)
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"上傳照片失敗: {str(e)}")
+        return jsonify({'error': '上傳照片失敗'}), 500
