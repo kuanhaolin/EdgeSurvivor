@@ -23,7 +23,7 @@ class Config:
     }
     
     # Socket.IO 配置
-    SOCKETIO_ASYNC_MODE = 'eventlet'
+    SOCKETIO_ASYNC_MODE = 'gevent'
     
     # Redis 配置（用於 Socket.IO）
     REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'

@@ -26,11 +26,12 @@ def create_app(config_name=None):
     # 初始化擴充套件
     db.init_app(app)
     jwt.init_app(app)
-    # Socket.IO 配置 - 使用 threading 異步模式（開發環境）
+    # Socket.IO 配置 - 根據環境選擇異步模式
+    async_mode = 'gevent' if config_name == 'production' else 'threading'
     socketio.init_app(
         app, 
         cors_allowed_origins="*",
-        async_mode='threading',  # 使用 threading 異步模式
+        async_mode=async_mode,
         logger=True,
         engineio_logger=False
     )
