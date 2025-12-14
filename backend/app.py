@@ -134,3 +134,6 @@ if __name__ == '__main__':
         db.create_all()
     # 在 Docker 開發環境中允許使用 Werkzeug
     socketio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+else:
+    # Gunicorn 會使用這個
+    app = create_app()
