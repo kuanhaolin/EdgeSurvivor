@@ -47,6 +47,29 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: 
+      # 連接相關（極限配置）
+      - --max-connections=2000
+      - --max-connect-errors=10000
+      - --wait-timeout=600
+      - --interactive-timeout=600
+      - --back-log=1000
+      # 性能優化（高負載配置）
+      - --innodb-buffer-pool-size=2G
+      - --innodb-log-file-size=512M
+      - --innodb-flush-log-at-trx-commit=2
+      - --innodb-flush-method=O_DIRECT
+      - --innodb-write-io-threads=8
+      - --innodb-read-io-threads=8
+      # 停用 Query Cache（MariaDB 10.11+）
+      - --query-cache-size=0
+      - --query-cache-type=0
+      # 併發優化（極限配置）
+      - --thread-cache-size=200
+      - --table-open-cache=4000
+      - --max-allowed-packet=64M
+      - --tmp-table-size=128M
+      - --max-heap-table-size=128M
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s

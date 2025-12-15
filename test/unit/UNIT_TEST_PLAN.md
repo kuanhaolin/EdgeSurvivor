@@ -30,13 +30,13 @@
   結果：PASSED
 * [ ] 1.1.2 信箱欄位驗證
   測試檔案:  `./frontend/test/TC_1.1.2.js`  `./backend/test/TC_1_1_2.py`
-  測試方式：Jest/Pytest
+  測試方式：Vitest/Pytest
   測試說明：應該要求信箱必填，且需符合正確格式
   測試資料：test@test:false, testtest.com:false, test @test.com:false, test@test.com:true, test@gmail.com:true
   結果：PASSED
 * [ ] 1.1.3 密碼欄位驗證
   測試檔案: `./frontend/test/TC_1.1.3.js`  `./backend/test/TC_1_1_3.py`
-  測試方式：Jest/Pytest
+  測試方式：Vitest/Pytest
   測試說明：應該要求密碼必填，且長度只少需6個字元
   測試資料：1:false, 123:false, 123456:true, 000000:true, password: true
   結果：PASSED
@@ -49,7 +49,7 @@
 * [ ] 1.1.5 重複信箱註冊失敗
   測試檔案: `./backend/test/TC_1_1_5.py`
   測試方式：Pytest
-  測試說明：輸入已存在的 Email 註冊, 假設已存在:test@test.com。
+  測試說明：輸入已存在的 Email 註冊, 假設已存在:test@test.com
   測試資料：test01@test.com:true, test@test02.com:true, test@test.com:false
   結果：PASSED
 * [ ] 1.1.6 成功註冊
@@ -79,13 +79,13 @@
   結果: PASSED
 * [ ] 1.2.2 信箱欄位必填
   測試檔案:  `./frontend/test/TC_1.1.2.js`  `./backend/test/TC_1_1_2.py`
-  測試方式：Jest/Pytest
+  測試方式：Vitest/Pytest
   測試說明：應該要求信箱必填
   測試資料：test@test.com:true, test@gmail.com:true, ' ':false
   結果：PASSED
 * [ ] 1.2.3 密碼欄位必填
   測試檔案:  `./frontend/test/TC_1.1.3.js`  `./backend/test/TC_1_1_3.py`
-  測試方式：Jest/Pytest
+  測試方式：Vitest/Pytest
   測試說明：應該要求密碼必填，前端會驗證密碼需6個字元
   測試資料：前端-123:false, 123456:true, 000000:true | 後端-" ":false, 123456:true, 000000:true
   結果：PASSED
@@ -124,7 +124,7 @@
 * [ ] 1.3.1 啟用 2FA
   測試檔案: `./backend/test/TC_1_3_1.py`
   測試方式: Pytest
-  測試說明: 驗證2FA的setup是否能成功verify
+  測試說明: 驗證2FA的setup是否能成功驗證
   測試資料: pyotp.TOTP(secret).now()
   結果: PASSED
 * [ ] 1.3.2 登入需2FA
@@ -180,7 +180,7 @@
   測試資料: user@user.com
   結果: PASSED
 * [ ] 1.4.4 登入返回 JWT Token
-  測試檔案: `./backend/test/TC_1_4_5.py`
+  測試檔案: `./backend/test/TC_1_4_4.py`
   測試方式: Pytest
   測試說明: 測試Google登入成功後應該返回JWT token
   測試資料: user@user.com
@@ -216,7 +216,7 @@
   測試檔案: `./frontend/test/TC_1.5.4.js` `./backend/test/TC_1_5_4.py`
   測試方式: Vitest/Pytest
   測試說明: 測試新密碼欄位是否正確
-  測試資料: 前端- | 後端-" ": false, "123": false, "123456":true
+  測試資料: " ": false, "123": false, "123456":true
   結果: PASSED
 * [ ] 1.5.5 確認新密碼欄位驗證
   測試檔案: `./frontend/test/TC_1.5.5.js`
@@ -255,7 +255,7 @@
   測試資料: ' ':false, '654321':false, '123456':true
   結果: PASSED
 * [ ] 1.5.11 已登入使用者變更密碼成功
-  測試檔案: `./frontend/test/TC_1.5.11.js` `./backend/test/TC_1_5_11.py`
+  測試檔案: `./backend/test/TC_1_5_11.py`
   測試方式: Pytest
   測試說明: 測試已登入使用者變JWT更密碼
   測試資料: oldpassword, newpassword
@@ -269,48 +269,36 @@
 
 ---
 
-### TC_1.6 Email 驗證 乾忘了做這個功能
+### TC_1.6 Email 驗證
 
-**測試檔案:** `./frontend/test/TC_1.6.js` `./backend/test/TC_1_6.py`
+**測試檔案:** `./backend/test/TC_1_6.py`
 
 **測試案例:**
 
-* [ ] 1.6.1 註冊後自動發送驗證信
+* [ ] 1.6.1 SMTP 連線測試
   測試檔案: `./backend/test/TC_1_6_1.py`
   測試方式: Pytest
-  測試說明: 註冊成功後應該自動發送email驗證信
-  測試資料: 註冊 → 發送驗證信
-  結果:
-* [ ] 1.6.2 驗證 Token 有效
-  測試檔案: `./frontend/test/TC_1.6.2.js` `./backend/test/TC_1_6_2.py`
-  測試方式: Vitest/Pytest
-  測試說明: 使用有效token驗證email應該成功
-  測試資料: 有效token → 成功
-  結果:
-* [ ] 1.6.3 Token 過期無法驗證
+  測試說明: 測試能否連接SMTP伺服器
+  測試資料:
+  結果: PASSED
+* [ ] 1.6.2 驗證 Email 格式測試
+  測試檔案: `./backend/test/TC_1_6_2.py`
+  測試方式: Pytest
+  測試說明: 測試HTML內容生成
+  測試資料:
+  結果: PASSED
+* [ ] 1.6.3 重設密碼郵件測試
   測試檔案: `./backend/test/TC_1_6_3.py`
   測試方式: Pytest
-  測試說明: 過期token無法驗證email
-  測試資料: 過期token → 失敗
-  結果:
-* [ ] 1.6.4 重新發送驗證信
-  測試檔案: `./frontend/test/TC_1.6.4.js` `./backend/test/TC_1_6_4.py`
-  測試方式: Vitest/Pytest
-  測試說明: 用戶可以重新發送驗證信
-  測試資料: 請求重發 → 發送新驗證信
-  結果:
-* [ ] 1.6.5 已驗證無法重複驗證
-  測試檔案: `./backend/test/TC_1_6_5.py`
-  測試方式: Pytest
-  測試說明: 已驗證的email無法再次驗證
-  測試資料: 已驗證帳號 → 拒絕
-  結果:
+  測試說明: 測試驗證碼插入與完整性正確
+  測試資料:
+  結果: PASSED
 
 ---
 
 ### TC_1.7 刪除帳號
 
-**測試檔案:** `./frontend/test/TC_1.7.js` `./backend/test/TC_1_7.py`
+**測試檔案:** `./backend/test/TC_1_7.py`
 
 **測試案例:**
 
@@ -375,7 +363,8 @@
   測試檔案: `./backend/test/TC_1_8_6.py`
   測試方式: Pytest
   測試說明: 測試更新隱私設定，驗證社群資訊是否所有人可見
-  測試資料: PASSED
+  測試資料:
+  結果: PASSED
 * [ ] 1.8.7 隱私僅好友可見
   測試檔案: `./backend/test/TC_1_8_7.py`
   測試方式: Pytest
@@ -418,7 +407,7 @@
   測試檔案: `./backend/test/TC_1_9_2.py`
   測試方式: Pytest
   測試說明: 連結https://facebook.com/your_profile帳號，測試是否能成功生成icon與連結
-  測試資料: https://instagram.com/user01
+  測試資料: https://facebook.com/user01
   結果: PASSED
 * [ ] 1.9.3 連結 LINE
   測試檔案: `./frontend/test/TC_1.9.3.js` `./backend/test/TC_1_9_3.py`
@@ -455,7 +444,7 @@
   測試說明: 測試欄位必填測試，包含五項
   測試資料: "期末考", "其他", "中央大學", "2025/12/10", "2025/12/10", "", "5", "":true, "放寒假", "", "", "", "", "", "", "":false, "開學", "其他", "", "", "", "", "", "":false,
   結果: PASSED
-* [ ] 2.1.2 開始時間不可早於當前時間
+* [ ] 2.1.2 時間驗證
   測試檔案: `./frontend/test/TC_2.1.2.js`  `./backend/test/TC_2_1_2.py`
   測試方式: Vitest/Pytest
   測試說明: 測試開始時間必須早於結束時間
@@ -675,7 +664,7 @@
   結果: PASSED
 * [ ] 3.1.4 依興趣篩選
   測試檔案: `./frontend/test/TC_3.1.4.js`
-  測試方式: Vitest/Pytest
+  測試方式: Vitest
   測試說明: 測試篩選興趣條件
   測試資料:
   結果: PASSED
@@ -685,7 +674,8 @@
   測試說明: 測試重置篩選條件
   測試資料:
   結果: PASSED
-* [ ] 3.1.6 查看用戶資料測試檔案: `./frontend/test/TC_3.1.6.js` `./backend/test/TC_3_1_6.py`
+* [ ] 3.1.6 查看用戶資料
+  測試檔案: `./frontend/test/TC_3.1.6.js` `./backend/test/TC_3_1_6.py`
   測試方式: Vitest/Pytest
   測試說明: 測試是否顯示用戶資料
   測試資料:
@@ -787,7 +777,7 @@
   測試資料:
   結果: PASSED
 * [ ] 3.3.6 更新審核名單
-  測試檔案: `./backend/test/TC_3_3_5.py`
+  測試檔案: `./backend/test/TC_3_3_6.py`
   測試方式: Pytest
   測試說明: 測試更新審核名單
   測試資料:
@@ -930,7 +920,7 @@
   測試檔案: `./frontend/test/TC_4.2.2.js` `./backend/test/TC_4_2_2.py`
   測試方式: Vitest/Pytest
   測試說明: 測試申請活動
-  測試資料: 自我介紹 → 記錄
+  測試資料: 
   結果: PASSED
 * [ ] 4.2.3 驗證申請狀態
   測試檔案: `./backend/test/TC_4_2_3.py`
@@ -1118,7 +1108,7 @@
   測試說明: 測試檔案大小、格式與類型
   測試資料:
   結果: PASSED
-* [ ] 4.6.3上傳照片
+* [ ] 4.6.3 上傳照片
   測試檔案: `./backend/test/TC_4_6_3.py`
   測試方式: Pytest
   測試說明: 測試檔案是否上傳成功
