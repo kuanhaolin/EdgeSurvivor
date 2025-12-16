@@ -1,0 +1,99 @@
+schema: 1
+story: '7.1'
+story_title: '上傳用戶頭像'
+gate: CONCERNS
+status_reason: '核心功能已完整實作並測試通過，但AC 2、3、5未完全滿足（檔案大小2MB vs 5MB，缺少壓縮/縮圖，無舊檔刪除）。團隊已決定暫緩這些優化功能。'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-12-16T23:59:59+08:00'
+
+top_issues:
+  - severity: medium
+    category: requirements
+    description: 'AC 2 未完全達成：檔案大小限制為2MB而非需求的5MB'
+    suggested_owner: dev
+    refs: 
+      - 'backend/blueprints/upload.py:13'
+  - severity: medium
+    category: requirements
+    description: 'AC 3 未實作：缺少圖片壓縮與縮圖功能'
+    suggested_owner: dev
+    refs:
+      - 'backend/blueprints/upload.py'
+  - severity: low
+    category: requirements
+    description: 'AC 5 未實作：舊頭像未自動刪除，可能造成儲存空間浪費'
+    suggested_owner: dev
+    refs:
+      - 'backend/blueprints/upload.py'
+
+waiver:
+  active: false
+
+quality_score: 70
+# 計算：100 - (10 × 3 medium concerns) = 70
+
+expires: '2025-12-30T23:59:59+08:00'
+
+evidence:
+  tests_reviewed: 10
+  risks_identified: 3
+  trace:
+    ac_covered: [1, 4]  # 檔案類型支援、即時更新
+    ac_gaps: [2, 3, 5]  # 檔案大小限制、壓縮縮圖、舊檔刪除
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: |
+      - ✓ JWT認證正確實作
+      - ✓ 檔案類型驗證（前端+後端）
+      - ✓ 檔案大小限制
+      - ✓ UUID命名避免路徑遍歷攻擊
+      - ⚠ 建議：考慮添加MIME type檢查（使用python-magic）
+  performance:
+    status: CONCERNS
+    notes: |
+      - ⚠ 缺少圖片壓縮，大圖片會影響載入速度
+      - ⚠ Docker未配置uploads volume，重啟會丟失檔案
+      - ✓ 測試執行時間良好（2.14s for 10 tests）
+  reliability:
+    status: PASS
+    notes: |
+      - ✓ 完整的錯誤處理（try-catch）
+      - ✓ 檔案驗證充足
+      - ✓ 前後端雙重驗證
+      - ✓ 10/10測試通過
+  maintainability:
+    status: PASS
+    notes: |
+      - ✓ 程式碼結構清晰
+      - ✓ 測試覆蓋率良好
+      - ✓ 命名規範一致
+      - ✓ 註解充足（中文註解）
+
+recommendations:
+  immediate: []  # 無必須立即修復的問題
+  future:
+    - action: '實作圖片壓縮與縮圖（Pillow）'
+      refs: ['backend/blueprints/upload.py']
+      priority: medium
+    - action: '調整檔案大小限制至5MB'
+      refs: ['backend/blueprints/upload.py:13', 'frontend/src/utils/imageValidation.js:5']
+      priority: low
+    - action: '實作舊頭像自動刪除機制'
+      refs: ['backend/blueprints/upload.py']
+      priority: low
+    - action: '配置Docker volume持久化uploads目錄'
+      refs: ['docker-compose.yml']
+      priority: low
+    - action: '考慮添加MIME type檢查增強安全性'
+      refs: ['backend/blueprints/upload.py']
+      priority: low
+
+test_coverage:
+  unit_tests: 10
+  integration_tests: 1
+  e2e_tests: 1
+  total_passing: 10
+  total_failing: 0
+  coverage_percentage: 85  # 估計值，基於測試案例覆蓋的功能範圍
