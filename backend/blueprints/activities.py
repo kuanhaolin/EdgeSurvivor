@@ -162,6 +162,7 @@ def get_activity(activity_id):
                     'name': user.name,
                     'avatar': user.profile_picture,
                     'role': participant.role,
+                    'status': participant.status,
                     'joined_at': participant.joined_at.isoformat() if participant.joined_at else None
                 })
         
@@ -293,7 +294,7 @@ def join_activity(activity_id):
     """申請加入活動"""
     try:
         current_user_id = int(get_jwt_identity())
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
         activity = Activity.query.get(activity_id)
         
         if not activity:
@@ -424,7 +425,7 @@ def reject_participant(activity_id, participant_id):
     """拒絕參與申請"""
     try:
         current_user_id = int(get_jwt_identity())
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
         activity = Activity.query.get(activity_id)
         
         if not activity:

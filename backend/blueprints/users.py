@@ -10,6 +10,32 @@ from sqlalchemy import func, or_, and_
 
 users_bp = Blueprint('users', __name__)
 
+@users_bp.route('', methods=['GET'])
+@jwt_required()
+def get_users():
+    """獲取用戶列表（支援篩選）"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        # 獲取篩選參數
+        gender = request.args.get('gender')
+        location = request.args.get('location')
+        
+        query = User.query.filter(User.user_id != current_user_id, User.is_active == True)
+        
+        if gender:
+            query = query.filter(User.gender == gender)
+        
+        if location:
+            query = query.filter(User.location.ilike(f"%{location}%"))
+            
+        users = query.limit(50).all()
+        
+        return jsonify([user.to_dict() for user in users]), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @users_bp.route('/stats', methods=['GET'])
 @jwt_required()
 def get_user_stats():

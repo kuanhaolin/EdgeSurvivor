@@ -226,6 +226,7 @@ def submit_review(activity_id):
         existing_review.comment = comment
         review = existing_review
         message = '評價已更新'
+        status_code = 200
     else:
         # 創建新評價
         review = ActivityReview(
@@ -237,6 +238,7 @@ def submit_review(activity_id):
         )
         db.session.add(review)
         message = '評價已提交'
+        status_code = 201
     
     db.session.commit()
     
@@ -246,7 +248,7 @@ def submit_review(activity_id):
     return jsonify({
         'message': message,
         'review': review.to_dict()
-    }), 200
+    }), status_code
 
 # 更新用戶的評價數量與平均評分
 def update_user_rating_stats(user_id):

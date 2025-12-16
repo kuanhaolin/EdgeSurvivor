@@ -199,6 +199,19 @@ def send_message():
         
         if not data.get('receiver_id') or not data.get('content'):
             return jsonify({'error': 'receiver_id and content are required'}), 400
+            
+        receiver_id = data['receiver_id']
+        
+        # 檢查是否為好友（雙向檢查）
+        from models.match import Match
+        is_friend = Match.query.filter(
+            ((Match.user_a == current_user_id) & (Match.user_b == receiver_id)) |
+            ((Match.user_a == receiver_id) & (Match.user_b == current_user_id)),
+            Match.status.in_(['accepted', 'confirmed'])
+        ).first()
+        
+        if not is_friend:
+            return jsonify({'error': '只能發送訊息給好友'}), 403
         
         # 創建訊息
         message = ChatMessage(
