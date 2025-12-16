@@ -1,0 +1,77 @@
+﻿schema: 1
+story: '2.2'
+story_title: '瀏覽活動列表'
+gate: PASS
+status_reason: '核心功能已完成並通過驗證。測試覆蓋不足的風險已在需求審查階段接受。'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-12-15T15:56:00+08:00'
+
+top_issues:
+  - issue: '缺乏自動化測試覆蓋'
+    severity: 'medium'
+    category: 'testing'
+    suggested_owner: 'dev'
+    refs: ['frontend/src/views/Activities.vue']
+    notes: '需求審查階段決定接受此風險，建議未來補充'
+
+waiver:
+  active: false
+
+quality_score: 90
+expires: '2025-12-29T23:59:59+08:00'
+
+evidence:
+  tests_reviewed: 0
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 5, 8]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'JWT 認證已實作，無新增安全風險'
+  performance:
+    status: PASS
+    notes: '前端篩選適用於小量資料，響應速度快'
+  reliability:
+    status: CONCERNS
+    notes: '無測試覆蓋，難以確保功能穩定性。未來修改可能引入 regression。'
+  maintainability:
+    status: PASS
+    notes: '程式碼結構清晰，使用共用篩選函數'
+
+recommendations:
+  immediate: []
+  future:
+    - action: '補充前端篩選測試（Vitest）'
+      refs: ['frontend/test/TC_2_2_*.test.js']
+    - action: '考慮活動量增加時改為後端 API 篩選'
+      refs: ['backend/blueprints/activities.py']
+    - action: '解決測試檔案命名衝突'
+      refs: ['backend/test/TC_2_2_*.py']
+      notes: '現有檔案實際是 Story 2.7 的測試'
+
+technical_decisions:
+  - decision: '採用前端篩選而非後端 API'
+    rationale: 'MVP 階段活動數量少，前端篩選已足夠且響應快'
+    accepted_by: 'Product Team'
+  - decision: '移除日期範圍和難度篩選需求'
+    rationale: '簡化 MVP 範圍，只保留核心類別和地點篩選'
+    accepted_by: 'Product Team'
+  - decision: '不實作分頁功能'
+    rationale: '目前活動數量少，暫不需要分頁'
+    accepted_by: 'Product Team'
+  - decision: '不新增自動化測試'
+    rationale: '需求審查階段權衡，接受測試覆蓋不足的風險'
+    accepted_by: 'Product Team'
+
+review_notes: |
+  Story 2.2 經過需求審查後大幅簡化範圍，從全功能篩選+分頁縮減為基礎的
+  類別和地點前端篩選。這是合理的 MVP 策略。
+  
+  功能實作品質良好，使用共用函數保持 DRY 原則，Element Plus 組件使用
+  正確。唯一的主要疑慮是缺乏自動化測試，但這在需求審查階段已被明確
+  討論並接受。
+  
+  建議在技術債務處理時補充基本測試，確保未來修改不會破壞現有功能。

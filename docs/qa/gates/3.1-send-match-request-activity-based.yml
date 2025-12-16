@@ -1,0 +1,132 @@
+﻿# Quality Gate Decision - Story 3.1
+
+schema: 1
+story: '3.1'
+story_title: '發起媒合申請（基於活動）'
+gate: CONCERNS
+status_reason: '核心功能完整，但缺少前端測試覆蓋，建議補充測試後再發布生產環境。'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-12-16T12:05:31Z'
+
+# Issues identified
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    finding: '缺少前端整合測試（TC_3_1_*.test.js）'
+    suggested_action: '創建 ActivityDetail.vue 媒合按鈕的單元測試和整合測試'
+  - id: 'REQ-001'
+    severity: low
+    finding: 'AC3 "申請發送後顯示等待回應狀態" 實作簡化，按鈕不會動態更新狀態'
+    suggested_action: '可選實作：加入 checkMatchStatus 函數檢查已發送申請並禁用按鈕'
+
+# Waiver not active
+waiver:
+  active: false
+
+# Risk summary
+risk_summary:
+  totals:
+    critical: 0
+    high: 0
+    medium: 1
+    low: 1
+  recommendations:
+    must_fix: []
+    monitor:
+      - 'TEST-001: 建議在下一次迭代補充前端測試'
+
+# Evidence
+evidence:
+  tests_reviewed: 8
+  backend_tests_complete: true
+  frontend_tests_complete: false
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 4, 5, 6]
+    ac_gaps: [3]
+
+# NFR validation
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'JWT 認證完整，後端防重複、防自己向自己發送，活動存在性驗證完整'
+  performance:
+    status: PASS
+    notes: '使用後端防重複檢查，避免前端不必要的狀態查詢'
+  reliability:
+    status: PASS
+    notes: '完整錯誤處理，包含 try-catch 和 rollback 機制'
+  maintainability:
+    status: PASS
+    notes: '實作簡潔，複用 Matches.vue 模式，不增加複雜度'
+  testability:
+    status: CONCERNS
+    notes: '後端測試完整，前端測試缺失'
+
+# Acceptance Criteria Coverage
+acceptance_criteria_status:
+  - ac: 1
+    description: '可以在活動參與者列表中點擊「發起媒合」'
+    status: PASS
+    evidence: 'ActivityDetail.vue#L138-148 按鈕已實作'
+  - ac: 2
+    description: '可以撰寫媒合申請訊息（message 欄位）'
+    status: PASS
+    evidence: 'ElMessageBox.prompt 輸入對話框 (Line 770-790)'
+  - ac: 3
+    description: '申請發送後顯示「等待回應」狀態'
+    status: CONCERNS
+    evidence: '簡化實作：顯示成功訊息但按鈕不會動態更新，後端有防重複保護'
+  - ac: 4
+    description: '不能向自己發起媒合'
+    status: PASS
+    evidence: '按鈕條件 v-if 排除自己，後端 Line 244-245 驗證'
+  - ac: 5
+    description: '不能重複向同一用戶發起媒合（相同活動）'
+    status: PASS
+    evidence: '後端雙向檢查 Line 256-290，錯誤訊息處理完整'
+  - ac: 6
+    description: '申請記錄關聯到 activity_id'
+    status: PASS
+    evidence: 'axios.post 包含 activity_id，後端完整處理'
+
+# Implementation summary
+implementation_summary:
+  backend_completion: 100
+  frontend_completion: 95
+  test_completion: 70
+  overall_quality: 85
+  
+  components_reviewed:
+    - 'backend/blueprints/matches.py (7 endpoints)'
+    - 'backend/models/match.py (完整模型)'
+    - 'frontend/src/views/ActivityDetail.vue (媒合按鈕)'
+    - 'frontend/src/views/Matches.vue (完整媒合頁面)'
+    - 'backend/test/TC_3_2_*.py (8+ 測試檔案)'
+
+# Recommendations
+recommendations:
+  immediate: []
+  next_sprint:
+    - action: '補充前端測試 TC_3_1_*.test.js'
+      priority: medium
+      effort: '2-4 hours'
+    - action: '可選：實作 checkMatchStatus 動態按鈕狀態'
+      priority: low
+      effort: '1-2 hours'
+
+# Gate decision rationale
+decision_rationale: |
+  Story 3.1 的核心功能已完整實作並經過充分的後端測試驗證。
+  
+  優點：
+  - 後端 API 完整且經過多個測試檔案驗證
+  - 前端實作簡潔，複用既有模式，易於維護
+  - 安全性、可靠性、可維護性均達標
+  - 防重複邏輯完善（後端雙向檢查）
+  
+  待改進：
+  - 缺少前端測試覆蓋（建議補充但不阻擋發布）
+  - AC3 實作簡化（按鈕不會動態顯示狀態，但後端有完整防護）
+  
+  建議：CONCERNS - 功能可以發布，但建議在下次迭代補充前端測試。

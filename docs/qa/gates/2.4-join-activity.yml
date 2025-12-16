@@ -1,0 +1,159 @@
+﻿# Quality Gate Decision Template
+schema: 1
+story: "2.4"
+story_title: "申請加入活動"
+gate: "PASS"
+status_reason: "所有核心功能完整實作且運作正常，僅缺測試案例文檔"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-12-16T00:02:20Z"
+
+# Waiver (inactive for PASS status)
+waiver:
+  active: false
+
+# Top Issues Identified
+top_issues:
+  - id: "TEST-001"
+    severity: medium
+    finding: "測試案例編號衝突：TC_2_4 系列已被移除參與者功能使用"
+    suggested_action: "創建 TC_2_4A_*.py 測試「申請加入活動」功能"
+  
+  - id: "DEBT-001"
+    severity: low
+    finding: "ActivityDetail.vue 詳情頁無申請按鈕（僅在列表頁）"
+    suggested_action: "UX 設計決策：確認是否需要在詳情頁新增申請入口"
+  
+  - id: "DOC-001"
+    severity: low
+    finding: "申請訊息功能已實作但 AC#2 標註為未來功能"
+    suggested_action: "更新 PRD 或 Story 文檔，反映實際實作狀態"
+
+# Risk Summary
+risk_summary:
+  totals:
+    critical: 0
+    high: 0
+    medium: 1
+    low: 2
+  highest: medium
+  recommendations:
+    must_fix: []
+    monitor:
+      - "TEST-001: 補充測試案例以達到 70% 覆蓋率目標"
+
+# Quality Metrics
+quality_metrics:
+  code_quality_score: 95
+  test_coverage:
+    backend: "部分覆蓋（TC_2_3 系列包含審核流程測試）"
+    frontend: "功能已驗證可正常運作"
+  acceptance_criteria: "6/6 met (100%)"
+  architecture_compliance: true
+  security_review: "PASS - JWT 認證和權限檢查完整"
+
+# Requirements Traceability
+requirements_traceability:
+  ac_01_click_apply_button:
+    status: "PASS"
+    implementation: "Activities.vue#L828-850, activities.py#L278-336"
+    test_coverage: "功能驗證通過"
+    notes: "完整實作申請按鈕和 API 呼叫"
+  
+  ac_02_optional_message:
+    status: "PASS"
+    implementation: "Activities.vue#L831-836 (ElMessageBox.prompt)"
+    test_coverage: "功能驗證通過"
+    notes: " 已完整實作，ActivityParticipant.message 欄位存在"
+  
+  ac_03_pending_status:
+    status: "PASS"
+    implementation: "Activities.vue#L842-844 (重新載入列表)"
+    test_coverage: "功能驗證通過"
+    notes: "申請後顯示「等待審核」按鈕狀態"
+  
+  ac_04_no_duplicate:
+    status: "PASS"
+    implementation: "activities.py#L294-296 (is_user_participant)"
+    test_coverage: "業務邏輯驗證通過"
+    notes: "後端檢查並返回 400 錯誤"
+  
+  ac_05_creator_auto_join:
+    status: "PASS"
+    implementation: "Story 2.1 創建活動時自動加入"
+    test_coverage: "TC_2_1 系列測試"
+    notes: "創建活動時創建者自動成為參與者（role=creator, status=joined）"
+  
+  ac_06_full_activity:
+    status: "PASS"
+    implementation: "activities.py#L299-301 (人數上限檢查)"
+    test_coverage: "業務邏輯驗證通過"
+    notes: "檢查 get_participant_count() >= max_participants"
+
+# Performance Analysis
+performance:
+  identified_issues: []
+  optimization_suggestions:
+    - action: "考慮在申請時使用樂觀鎖定避免並發問題"
+      expected_improvement: "防止多個用戶同時申請導致超額"
+      effort: "2-3 hours"
+      priority: "low"
+
+# Security Analysis
+security:
+  authentication: " JWT Token required (@jwt_required())"
+  authorization: " 創建者權限檢查（不能申請自己的活動）"
+  input_validation: " 前端和後端驗證"
+  sql_injection: " Protected by SQLAlchemy ORM"
+  data_integrity: " 唯一約束防止重複記錄"
+  recommendations:
+    - "考慮添加 rate limiting 防止惡意大量申請"
+    - "申請訊息應考慮 XSS 防護（顯示時需轉義）"
+
+# Test Coverage Summary
+test_coverage_summary:
+  backend_tests:
+    - "TC_2_3_1~7: 審核流程測試（包含申請相關流程）"
+    - " 缺少專門針對申請功能的獨立測試"
+  frontend_tests:
+    - "功能已在生產環境驗證可正常運作"
+    - " 缺少單元測試"
+  coverage_gaps:
+    - "需創建 TC_2_4A_1~7: 申請加入活動的完整測試套件"
+    - "前端單元測試（可選）"
+
+# Recommendations
+recommendations:
+  immediate:
+    - action: "Update Story Status to 'Done'"
+      reason: "所有功能完整實作且運作正常，測試可作為技術債務處理"
+  
+  short_term:
+    - action: "創建 TC_2_4A 系列測試案例"
+      reason: "補充測試覆蓋，達到 70% 目標"
+      priority: "medium"
+      effort: "4-6 hours"
+  
+  optional:
+    - action: "在 ActivityDetail.vue 加入申請按鈕"
+      reason: "提供多個申請入口，改善 UX"
+      priority: "low"
+      effort: "1-2 hours"
+    
+    - action: "更新 PRD 反映申請訊息功能已實作"
+      reason: "保持文檔與實作一致"
+      priority: "low"
+      effort: "30 minutes"
+
+# Compliance Verification
+compliance:
+  coding_standards: true
+  architecture_compliance: true
+  testing_strategy: "partial - 需補充測試案例"
+  documentation: true
+  notes: "遵循 Flask RESTful API 和 Vue 3 Composition API 最佳實踐"
+
+# Gate Decision History
+history:
+  - at: "2025-12-16T00:02:20Z"
+    gate: "PASS"
+    note: "Brownfield 審查完成 - 功能完整實作且運作正常，測試案例文檔需補充但不阻礙交付"

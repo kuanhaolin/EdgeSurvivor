@@ -1,0 +1,83 @@
+schema: 1
+story: '2.8'
+story_title: '取消活動'
+gate: CONCERNS
+status_reason: 'Core cancel functionality works well with 12/12 tests passing. Missing: UI verification for cancelled activity display in Activities.vue list page and join button logic. Future features (cancellation reason, participant notifications) appropriately deferred.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-12-16T15:30:00Z'
+
+quality_score: 80
+expires: '2025-12-30T23:59:59Z'
+
+top_issues:
+  - id: TEST-001
+    severity: medium
+    finding: 'Activities.vue list page lacks specific logic for displaying cancelled activities differently (e.g., visual styling, disabled state)'
+    suggested_action: 'Add visual indicators (opacity, strikethrough) for cancelled activities in the list view'
+    suggested_owner: dev
+  - id: TEST-002
+    severity: medium
+    finding: 'Join button logic not verified to be hidden for cancelled activities in list view'
+    suggested_action: 'Verify and test that cancelled activities do not show join/apply buttons'
+    suggested_owner: dev
+  - id: TEST-003
+    severity: low
+    finding: 'No frontend E2E tests for cancel workflow'
+    suggested_action: 'Consider adding vitest integration tests for cancel flow (optional)'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+evidence:
+  tests_reviewed: 12
+  tests_passed: 12
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 4, 6, 7]
+    ac_gaps: [3, 5]  # Deferred to future as documented
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Permission checks correctly implemented - only creator can cancel (verified via TC_2_8_2)'
+  performance:
+    status: PASS
+    notes: 'Simple status update operation, no performance concerns'
+  reliability:
+    status: PASS
+    notes: 'Idempotent cancel operation verified (TC_2_8_5), error handling present'
+  maintainability:
+    status: PASS
+    notes: 'Clean implementation reusing existing PUT API, well-documented tests'
+
+test_coverage:
+  backend:
+    - TC_2_8_1: Creator successfully cancels activity (status change to cancelled) - PASS
+    - TC_2_8_2: Non-creator cannot cancel activity (403 Forbidden) - PASS
+    - TC_2_8_4: Status verification after cancellation (database & API) - PASS
+    - TC_2_8_5: Idempotent cancel operation (already cancelled) - PASS
+    - TC_2_2_7: Creator can delete activity (hard delete) - EXISTS
+  frontend:
+    - Status dropdown includes "取消活動" option - IMPLEMENTED
+    - handleStatusChange updates activity status - IMPLEMENTED
+    - deleteActivity function with confirmation - IMPLEMENTED
+    - Visual status display ("已取消") - IMPLEMENTED
+
+recommendations:
+  immediate:
+    - action: 'Verify Activities.vue list page displays cancelled activities appropriately'
+      refs: ['frontend/src/views/Activities.vue']
+      priority: P1
+    - action: 'Confirm join/apply button is hidden for cancelled activities in list view'
+      refs: ['frontend/src/views/Activities.vue']
+      priority: P1
+  future:
+    - action: 'Implement cancellation_reason feature when business priority increases'
+      refs: ['backend/models/activity.py', 'backend/blueprints/activities.py', 'frontend/src/views/ActivityDetail.vue']
+      priority: P2
+    - action: 'Add participant notification system when Epic 5 (Notification) is implemented'
+      refs: ['Story 5.x']
+      priority: P2
+    - action: 'Consider adding frontend E2E tests for complete cancel workflow'
+      refs: ['frontend/test/']
+      priority: P3

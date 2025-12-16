@@ -1,0 +1,107 @@
+﻿# <!-- Powered by BMAD Core -->
+# Quality Gate Decision - Story 1.6
+
+schema: 1
+story: "1.6"
+story_title: "編輯用戶個人資料"
+gate: "CONCERNS"
+status_reason: "所有驗收標準已達成且測試覆蓋良好(10/11通過),但存在輸入驗證和XSS防護不足的安全性改進建議。功能可用但建議評估是否先處理安全性concerns。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-12-15T10:59:00+08:00"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "SEC-001"
+    severity: medium
+    finding: "後端缺少欄位長度和格式驗證(name, age, bio)"
+    suggested_action: "實作 validate_profile_data() 函數驗證欄位:name(1-100字元), age(18-100), bio(最大500字元)"
+    refs: ["backend/blueprints/users.py:151-203"]
+    owner: dev
+  
+  - id: "SEC-002"
+    severity: medium
+    finding: "bio 和社交 URL 未清理,可能注入惡意腳本或連結"
+    suggested_action: "使用 bleach.clean() 清理 bio HTML 標籤,驗證社交 URL 格式"
+    refs: ["backend/blueprints/users.py:151-203"]
+    owner: dev
+  
+  - id: "UI-001"
+    severity: low
+    finding: "前端興趣標籤無數量限制,可能造成 UI 混亂"
+    suggested_action: "限制最多 10 個標籤,超過時顯示提示訊息"
+    refs: ["frontend/src/views/Profile.vue"]
+    owner: dev
+
+quality_score: 80
+
+evidence:
+  tests_reviewed: 11
+  tests_passed: 10
+  test_coverage_percent: 91
+  risks_identified: 3
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: CONCERNS
+    notes: "JWT認證正確但缺少輸入驗證和XSS防護"
+  performance:
+    status: PASS
+    notes: "單一請求更新,無N+1查詢問題"
+  reliability:
+    status: PASS
+    notes: "錯誤處理完整,有rollback機制,測試覆蓋率91%"
+  maintainability:
+    status: PASS
+    notes: "程式碼結構清晰,命名語意明確"
+
+recommendations:
+  immediate:
+    - action: "增加後端輸入驗證函數"
+      priority: high
+      refs: ["backend/blueprints/users.py:151-203"]
+      estimated_effort: "2小時"
+    - action: "實作 XSS 防護(清理 bio 和驗證 URLs)"
+      priority: high
+      refs: ["backend/blueprints/users.py:151-203"]
+      estimated_effort: "2小時"
+  
+  future:
+    - action: "完整實作前端表單驗證規則"
+      priority: medium
+      refs: ["frontend/src/views/Profile.vue"]
+      estimated_effort: "3小時"
+    - action: "增加興趣標籤和邊界值測試"
+      priority: medium
+      refs: ["backend/test/"]
+      estimated_effort: "2小時"
+    - action: "興趣標籤數量限制"
+      priority: low
+      refs: ["frontend/src/views/Profile.vue"]
+      estimated_effort: "1小時"
+
+risk_summary:
+  totals:
+    critical: 0
+    high: 0
+    medium: 2
+    low: 1
+  highest:
+    probability: 3
+    impact: 4
+    score: 7
+    category: "Security - Input Validation"
+  recommendations:
+    must_fix: []
+    monitor:
+      - "監控是否有惡意輸入嘗試"
+      - "下一個 Sprint 處理輸入驗證增強"
+
+# Quality Gate History
+history:
+  - at: "2025-12-15T10:59:00+08:00"
+    gate: CONCERNS
+    note: "初始審查 - 功能完整但有安全性改進建議"

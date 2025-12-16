@@ -1,0 +1,313 @@
+---
+# Quality Gate Report
+# Story: 2.1 - 創建活動
+# Generated: 2025-12-15
+# Reviewer: Quinn (Test Architect)
+
+story_id: "2.1"
+story_title: "創建活動"
+epic: "Epic 2 - Activity Management System"
+
+gate_decision: CONCERNS
+gate_status: PASS_WITH_CONDITIONS
+
+decision_summary: |
+  核心功能完全實作且測試通過（7/7），後端程式碼品質優秀，前端 UX 良好。
+  雖然 4/9 AC 部分達成（進階欄位僅後端支援），但核心創建流程完整可用，符合 MVP 標準。
+  建議通過並標記為 Done，同時記錄技術債務供後續 Sprint 規劃。
+
+# Top Issues (最關鍵的問題)
+top_issues:
+  - issue: "測試覆蓋率報告失敗"
+    severity: MEDIUM
+    category: testing
+    description: "pytest coverage 數據未收集，無法量化測試品質"
+    recommendation: "修復 pytest.ini 配置，確保覆蓋率報告正常運作"
+    estimated_effort: "0.5 hours"
+    
+  - issue: "進階欄位 UI 缺失"
+    severity: MEDIUM
+    category: functionality
+    description: "4/9 AC 部分達成 - 集合點、費用、難度、性別偏好、年齡範圍、封面圖僅後端支援"
+    recommendation: "評估業務需求優先級，決定是否在後續 Sprint 補充"
+    estimated_effort: "4-6 hours"
+    
+  - issue: "輸入驗證不夠嚴格"
+    severity: LOW
+    category: code_quality
+    description: "未驗證 max_members 範圍、時間邏輯、日期是否未來"
+    recommendation: "後端添加進階驗證邏輯"
+    estimated_effort: "1 hour"
+
+# Risk Summary
+risk_summary:
+  overall_risk: LOW
+  risk_factors:
+    - factor: "功能完整性"
+      level: MEDIUM
+      note: "5/9 AC 完全達成，4/9 部分達成，核心流程可用"
+      
+    - factor: "程式碼品質"
+      level: LOW
+      note: "後端優秀，前端良好，符合架構規範"
+      
+    - factor: "測試覆蓋率"
+      level: MEDIUM
+      note: "核心測試通過，但覆蓋率報告失敗"
+      
+    - factor: "安全性"
+      level: LOW
+      note: "JWT 認證完整，ORM 防護 SQL Injection"
+      
+    - factor: "效能"
+      level: LOW
+      note: "單次查詢創建，無明顯效能瓶頸"
+
+# Test Results
+test_results:
+  backend_tests:
+    total: 7
+    passed: 7
+    failed: 0
+    execution_time: "5.52s"
+    files:
+      - "TC_2_1_1.py: 必填欄位驗證 (3 cases) - PASSED"
+      - "TC_2_1_2.py: 日期範圍驗證 (2 cases) - PASSED"
+      - "TC_2_1_3.py: 未登入驗證 (1 case) - PASSED"
+      - "TC_2_1_4.py: 創建者自動參與 (1 case) - PASSED"
+      
+  frontend_tests:
+    status: "Not executed (manual testing only)"
+    
+  coverage:
+    status: "FAILED"
+    note: "Coverage report generation failed - needs pytest.ini fix"
+
+# Acceptance Criteria Assessment
+acceptance_criteria:
+  total: 9
+  fully_implemented: 5
+  partially_implemented: 4
+  not_implemented: 0
+  
+  details:
+    - id: AC1
+      description: "輸入標題和描述"
+      status: COMPLETE
+      backend: true
+      frontend: true
+      
+    - id: AC2
+      description: "選擇活動類別"
+      status: COMPLETE
+      backend: true
+      frontend: true
+      
+    - id: AC3
+      description: "設定日期時間"
+      status: COMPLETE
+      backend: true
+      frontend: true
+      
+    - id: AC4
+      description: "設定地點和集合點"
+      status: PARTIAL
+      backend: true
+      frontend: false
+      note: "地點完整，集合點僅後端支援"
+      
+    - id: AC5
+      description: "設定最大人數"
+      status: COMPLETE
+      backend: true
+      frontend: true
+      
+    - id: AC6
+      description: "設定費用和難度"
+      status: PARTIAL
+      backend: true
+      frontend: false
+      note: "後端完整支援，前端 UI 未實作"
+      
+    - id: AC7
+      description: "設定參與者條件"
+      status: PARTIAL
+      backend: true
+      frontend: false
+      note: "性別偏好、年齡範圍僅後端支援"
+      
+    - id: AC8
+      description: "上傳封面圖"
+      status: PARTIAL
+      backend: true
+      frontend: false
+      note: "後端支援圖片欄位，前端未實作上傳"
+      
+    - id: AC9
+      description: "顯示活動詳情"
+      status: COMPLETE
+      backend: true
+      frontend: true
+
+# Code Quality Assessment
+code_quality:
+  backend:
+    score: EXCELLENT
+    strengths:
+      - "遵循 Flask Blueprint 架構模式"
+      - "使用 SQLAlchemy 2.x ORM 語法"
+      - "JWT 認證保護完整"
+      - "錯誤處理完整 (try-except + rollback)"
+      - "前後端欄位映射清晰"
+      - "向後兼容良好"
+    concerns:
+      - "未驗證 max_members 合理範圍"
+      - "未驗證時間邏輯 (start_time < end_time)"
+      - "未驗證日期是否在未來"
+      
+  frontend:
+    score: GOOD
+    strengths:
+      - "Vue 3 Composition API 標準用法"
+      - "Element Plus 組件運用得當"
+      - "表單驗證函數存在"
+      - "API 整合正確"
+      - "錯誤處理完整"
+      - "用戶體驗良好 (對話框模式)"
+    concerns:
+      - "缺少進階欄位 UI"
+      - "API 函數內嵌在組件中"
+      - "未使用獨立路由頁面"
+      
+  testing:
+    score: GOOD
+    strengths:
+      - "使用 pytest 參數化測試"
+      - "測試隔離良好 (SQLite in-memory)"
+      - "涵蓋核心場景"
+    concerns:
+      - "缺少無效 token 測試"
+      - "缺少完整欄位創建測試"
+      - "測試覆蓋率報告失敗"
+
+# NFR Assessment (Non-Functional Requirements)
+nfr_assessment:
+  security:
+    status: PASS
+    details:
+      - " JWT 認證保護完整"
+      - " SQL Injection 防護 (ORM)"
+      - " XSS 防護 (Vue 自動轉義)"
+      - " 缺少輸入長度限制"
+      
+  performance:
+    status: PASS
+    details:
+      - " 單次查詢即可創建活動"
+      - " 使用 db.session.flush() 優化"
+      - " 前端組件無明顯效能問題"
+      
+  reliability:
+    status: PASS
+    details:
+      - " 錯誤處理完整"
+      - " 資料庫回滾機制正確"
+      - " 前端錯誤提示清晰"
+      
+  maintainability:
+    status: PASS
+    details:
+      - " 程式碼結構清晰"
+      - " 命名語意化"
+      - " 註解充足"
+      - " 前端 API 函數未抽取"
+
+# Technical Debt
+technical_debt:
+  - item: "測試覆蓋率報告失敗"
+    type: "testing_infrastructure"
+    severity: MEDIUM
+    estimated_effort: "0.5 hours"
+    
+  - item: "前端 API 未抽取"
+    type: "code_structure"
+    severity: LOW
+    estimated_effort: "1 hour"
+    
+  - item: "進階欄位 UI 缺失"
+    type: "functionality"
+    severity: MEDIUM
+    estimated_effort: "4-6 hours"
+    
+  - item: "輸入驗證不嚴格"
+    type: "data_quality"
+    severity: LOW
+    estimated_effort: "1 hour"
+    
+  total_estimated_debt: "6.5-8.5 hours"
+
+# Recommendations
+recommendations:
+  immediate_actions:
+    - action: "修復測試覆蓋率配置"
+      priority: HIGH
+      effort: SMALL
+      description: "修改 pytest.ini 確保 coverage 報告正常運作"
+      
+  short_term_actions:
+    - action: "評估進階欄位業務優先級"
+      priority: MEDIUM
+      effort: DISCUSSION
+      description: "與 PO 確認集合點、費用、難度等欄位的業務價值"
+      
+    - action: "增強輸入驗證"
+      priority: MEDIUM
+      effort: SMALL
+      description: "添加日期、時間、人數範圍驗證邏輯"
+      
+  long_term_actions:
+    - action: "抽取前端 API 函數"
+      priority: LOW
+      effort: SMALL
+      description: "將 createActivity 相關 API 抽取到 api/activities.js"
+      
+    - action: "補充進階欄位 UI"
+      priority: LOW
+      effort: MEDIUM
+      description: "實作集合點、費用、難度、性別偏好、年齡範圍、封面圖 UI"
+
+# Sign-off
+sign_off:
+  reviewer: "Quinn (Test Architect)"
+  review_date: "2025-12-15"
+  decision: "PASS_WITH_CONDITIONS"
+  conditions:
+    - "修復測試覆蓋率配置（必要）"
+    - "記錄進階欄位技術債務"
+    - "在下一個 Sprint 規劃中處理中風險項"
+  approval: true
+  notes: |
+    Story 2.1 核心功能完全實作且測試通過。後端程式碼品質優秀，前端 UX 設計良好。
+    雖然部分進階欄位僅後端支援，但核心創建流程完整可用，符合 MVP 標準。
+    建議通過並標記為 Done，同時在 Backlog 中記錄技術債務供後續規劃。
+
+# Traceability
+traceability:
+  requirements_mapped: true
+  tests_mapped: true
+  code_reviewed: true
+  documentation_updated: true
+  
+  files_reviewed:
+    backend:
+      - "backend/blueprints/activities.py (L57-L138)"
+      - "backend/models/activity.py"
+      - "backend/models/activity_participant.py"
+      - "backend/test/TC_2_1_1.py"
+      - "backend/test/TC_2_1_2.py"
+      - "backend/test/TC_2_1_3.py"
+      - "backend/test/TC_2_1_4.py"
+    frontend:
+      - "frontend/src/views/Activities.vue (L310-L382, L919-L970)"
+    documentation:
+      - "docs/stories/2.1.story.md"

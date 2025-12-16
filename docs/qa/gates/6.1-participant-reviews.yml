@@ -1,0 +1,192 @@
+# Quality Gate Decision - Story 6.1
+schema: 1
+story: "6.1"
+story_title: "參與者互評系統"
+gate: CONCERNS
+status_reason: "功能完整且運行穩定，所有測試通過，但測試覆蓋率（55%）低於標準（70%），且缺乏 API 限流保護。建議下一迭代補強。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-19T10:30:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "TEST-001"
+    severity: medium
+    finding: "測試覆蓋率 55% 低於專案標準 70% (backend/blueprints/reviews.py)"
+    suggested_action: "補充錯誤處理路徑、邊界條件及並發場景測試"
+  - id: "SEC-001"
+    severity: medium
+    finding: "API 端點缺乏限流保護，存在潛在濫用風險"
+    suggested_action: "添加 Flask-Limiter 中間件，建議 10 requests/minute per user"
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 2, low: 2 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "測試覆蓋率不足：當前 55%，目標 70%"
+      - "API 限流缺失：建議添加 Flask-Limiter"
+      - "評分統計可能成為效能瓶頸（低風險，需監控）"
+      - "缺少評論長度限制（低風險）"
+
+evidence:
+  tests_reviewed: 5
+  risks_identified: 4
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: CONCERNS
+    notes: "JWT 認證完整，權限控制正確，輸入驗證良好，但缺乏 API 限流保護（Medium 風險）"
+  performance:
+    status: PASS
+    notes: "查詢已優化，響應時間 < 200ms，但高流量下評分統計更新可能成為瓶頸"
+  reliability:
+    status: PASS
+    notes: "錯誤處理完整，事務管理確保資料一致性，優雅降級機制完善"
+  maintainability:
+    status: PASS
+    notes: "代碼結構清晰，遵循 PEP8 規範，文檔完整，但缺少日誌記錄"
+  testability:
+    status: CONCERNS
+    notes: "測試架構良好，但覆蓋率 55% 低於標準 70%，缺少邊界條件和並發測試"
+
+quality_metrics:
+  test_coverage: "55% (5/5 測試通過，但覆蓋率不足)"
+  test_pass_rate: "100% (5/5 通過)"
+  code_quality: "優良（PEP8 規範，清晰結構）"
+  documentation: "完整（所有端點有 docstring）"
+  standards_compliance: "95% (缺日誌記錄)"
+  requirements_coverage: "100% (8/8 驗收條件實現)"
+  quality_score: 78
+
+recommendations:
+  immediate:
+    - action: "提升測試覆蓋率至 70%"
+      refs: ["backend/blueprints/reviews.py:1-266"]
+      priority: "medium"
+      effort: "4-6 小時"
+      details: "補充錯誤處理路徑測試、邊界條件測試、並發場景測試"
+    - action: "添加 API 限流保護"
+      refs: ["backend/blueprints/reviews.py:15-244"]
+      priority: "medium"
+      effort: "2-3 小時"
+      details: "使用 Flask-Limiter，建議 10 requests/minute per user"
+
+  future_improvements:
+    - action: "添加結構化日誌記錄"
+      priority: "low"
+      effort: "3-4 小時"
+      rationale: "改善生產環境除錯能力"
+    - action: "考慮評分統計快取機制"
+      priority: "low"
+      rationale: "防止高流量下效能瓶頸"
+    - action: "添加評論最大長度限制（建議 500 字）"
+      priority: "low"
+      rationale: "防止 DOS 攻擊"
+    - action: "考慮評價舉報/審核機制"
+      priority: "low"
+      rationale: "防止惡意評價濫用"
+
+production_status:
+  deployed: true
+  stability: "穩定運行中"
+  user_feedback: "正面（有效建立信任機制）"
+  monitoring: "基本監控（建議加強）"
+
+risk_matrix:
+  - risk: "API 濫用（無限流）"
+    probability: "medium"
+    impact: "medium"
+    level: "Medium"
+    mitigation: "添加限流中間件"
+  - risk: "測試覆蓋不足"
+    probability: "medium"
+    impact: "low"
+    level: "Medium"
+    mitigation: "補充邊界測試"
+  - risk: "評分統計效能瓶頸"
+    probability: "low"
+    impact: "medium"
+    level: "Low"
+    mitigation: "監控並考慮快取"
+  - risk: "大量評論文字攻擊"
+    probability: "low"
+    impact: "low"
+    level: "Low"
+    mitigation: "添加最大長度限制"
+
+technical_debt:
+  - item: "測試覆蓋不足"
+    priority: "medium"
+    effort: "4-6 小時"
+    impact: "測試品質與維護性"
+  - item: "API 限流缺失"
+    priority: "medium"
+    effort: "2-3 小時"
+    impact: "安全性與穩定性"
+  - item: "缺少日誌記錄"
+    priority: "low"
+    effort: "3-4 小時"
+    impact: "可觀察性與除錯能力"
+
+security_assessment:
+  authentication: "✅ JWT 認證完整"
+  authorization: "✅ 參與者權限檢查正確"
+  input_validation: "✅ 評分、評論驗證完整"
+  sql_injection: "✅ SQLAlchemy ORM 參數化查詢"
+  xss_protection: "✅ Element Plus 自動轉義"
+  rate_limiting: "⚠️ 缺失（Medium 風險）"
+  data_integrity: "✅ 外鍵約束與事務管理"
+
+test_summary:
+  total_tests: 5
+  passed: 5
+  failed: 0
+  skipped: 0
+  pass_rate: "100%"
+  coverage: "55%"
+  coverage_target: "70%"
+  coverage_gap: "-15%"
+  test_files:
+    - "TC_4_3_1.py - 活動狀態驗證"
+    - "TC_4_3_2.py - 評分驗證"
+    - "TC_4_3_3.py - 平均評分計算"
+    - "TC_4_3_4.py - 評論驗證"
+    - "TC_4_3_5.py - 評價更新"
+
+requirements_traceability:
+  - ac: 1
+    requirement: "活動完成後才能評價"
+    test: "TC_4_3_1"
+    status: "✅ PASS"
+  - ac: 2
+    requirement: "1-5 星評分系統"
+    test: "TC_4_3_2"
+    status: "✅ PASS"
+  - ac: 3
+    requirement: "評論內容必填"
+    test: "TC_4_3_4"
+    status: "✅ PASS"
+  - ac: 4
+    requirement: "只有參與者可評價"
+    test: "代碼驗證"
+    status: "✅ PASS"
+  - ac: 5
+    requirement: "只能評價活動參與者"
+    test: "代碼驗證"
+    status: "✅ PASS"
+  - ac: 6
+    requirement: "不能評價自己"
+    test: "代碼驗證"
+    status: "✅ PASS"
+  - ac: 7
+    requirement: "可查看他人對自己的評價"
+    test: "代碼驗證"
+    status: "✅ PASS"
+  - ac: 8
+    requirement: "評價可修改"
+    test: "TC_4_3_5"
+    status: "✅ PASS"

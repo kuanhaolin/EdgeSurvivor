@@ -1,0 +1,167 @@
+﻿schema: v1
+story:
+  epic: 5
+  story: 5.2
+  story_title: 查看活動費用清單
+  description: |
+    實作活動費用列表查看功能，讓活動參與者可以查看所有費用記錄，
+    包括支付者、金額、分帳類型和參與者等完整資訊。
+
+gate:
+  status: PASS
+  status_reason: |
+    所有驗收標準 (4/4) 完全達成，核心測試 (5/5) 全部通過。
+    功能性實作完整（後端 API + 前端組件），代碼品質良好。
+    發現兩個次要技術債務（N+1 查詢優化、前端測試缺失），
+    均為非阻塞性改進項目，不影響當前發布。
+
+reviewer:
+  name: Quinn
+  role: Test Architect & Quality Advisor
+  
+updated: 2025-12-16T20:50:47Z
+
+assessment:
+  requirements_met: 4/4
+  test_pass_rate: 100%  # 5/5 tests passed
+  code_quality: Good
+  overall_risk: LOW
+
+acceptance_criteria:
+  - id: AC1
+    description: 可以查看指定活動的所有費用記錄
+    status: PASS
+    evidence: |
+      - API 端點: GET /api/activities/<activity_id>/expenses 完全實作
+      - 測試驗證: TC_5_2_1.py (PASSED), TC_5_2_4.py (空清單 PASSED)
+      - 前端整合: ExpenseManager.vue loadExpenses() 方法調用 API
+      
+  - id: AC2
+    description: 費用清單顯示支付者、描述、金額、幣別、分帳類型
+    status: PASS
+    evidence: |
+      - API 回應: to_dict(include_details=True) 包含所有必要欄位
+      - 測試驗證: TC_5_2_1.py 驗證回應結構完整性
+      - 前端顯示: el-table 包含所有欄位的 column 定義
+      
+  - id: AC3
+    description: 可以看到每筆費用的應分帳人員
+    status: PASS
+    evidence: |
+      - API 回應: split_participants 欄位（JSON 格式）
+      - 測試驗證: TC_5_2_1.py 創建 3 種類型費用並驗證
+      - 前端顯示: 分攤方式欄位顯示參與人數和詳細名單（popover）
+      
+  - id: AC4
+    description: 顯示費用建立時間
+    status: PASS
+    evidence: |
+      - API 回應: created_at 欄位（ISO 8601 格式）
+      - 測試驗證: TC_5_2_1.py 驗證時間戳欄位存在
+      - 前端顯示: formatDate() 方法格式化為 MM/DD
+
+test_coverage:
+  backend:
+    total_tests: 5
+    passed: 5
+    failed: 0
+    coverage: "Core scenarios covered"
+    test_files:
+      - TC_5_2.py (main runner)
+      - TC_5_2_1.py (success path)
+      - TC_5_2_2.py (authorization - 2 tests)
+      - TC_5_2_4.py (edge cases - 2 tests)
+  
+  frontend:
+    status: "Not implemented (optional)"
+    note: "Manual testing sufficient, component stable"
+
+technical_debt:
+  - id: TD-5.2-1
+    title: N+1 查詢優化
+    priority: P2-Medium
+    impact: Performance
+    description: |
+      get_expenses 端點未使用 joinedload 預載入關聯資料（payer, borrower）。
+      當費用記錄較多時可能產生 N+1 查詢問題。
+    location: backend/blueprints/expenses.py#get_expenses
+    recommendation: "使用 options(joinedload(Expense.payer), joinedload(Expense.borrower))"
+    blocking: false
+    rationale: "當前活動費用記錄較少 (<50筆)，性能影響有限"
+    
+  - id: TD-5.2-3
+    title: 前端測試缺失
+    priority: P3-Low
+    impact: Maintainability
+    description: |
+      ExpenseManager.vue 組件缺少 Vitest 單元測試。
+      影響長期可維護性和重構安全性。
+    location: frontend/src/components/ExpenseManager.vue
+    recommendation: "添加關鍵場景的 Vitest 測試（表格渲染、空清單、錯誤處理）"
+    blocking: false
+    rationale: "功能已穩定且經過充分手動測試"
+
+code_quality:
+  strengths:
+    - 完整的權限控制（JWT + 參與者檢查）
+    - 清晰的 API 設計（expenses + summary）
+    - 豐富的前端 UX（載入/空清單/錯誤處理）
+    - 資料完整性（include_details=True）
+    - 全面的測試覆蓋（5 個測試案例）
+    
+  improvements:
+    - N+1 查詢優化（TD-5.2-1）
+    - 前端測試補充（TD-5.2-3）
+    - 可選：費用列表分頁（當 >100 筆時）
+
+security_review:
+  authentication: PASS
+  authorization: PASS
+  sql_injection_protection: PASS
+  sensitive_data_protection: PASS
+  cors_configuration: PASS
+
+performance_review:
+  response_time: "< 100ms (estimated for <50 expenses)"
+  query_optimization: "CONCERNS (N+1 potential, non-blocking)"
+  frontend_rendering: PASS
+  scalability: "Good for small-medium activities (<100 expenses)"
+
+risk_summary:
+  overall_risk_level: LOW
+  critical_risks: 0
+  high_risks: 0
+  medium_risks: 0
+  low_risks: 2
+  
+  risks:
+    - risk: N+1 查詢性能問題
+      probability: Low
+      impact: Medium
+      level: Low-Medium
+      mitigation: 當前活動規模小，未來可優化
+      
+    - risk: 前端測試缺失
+      probability: Medium
+      impact: Low
+      level: Low
+      mitigation: 功能已穩定，手動測試充分
+
+recommendations:
+  immediate: []
+  short_term:
+    - 將技術債務 TD-5.2-1 和 TD-5.2-3 加入產品 Backlog
+  medium_term:
+    - 在用戶量增長時優先處理 joinedload 優化
+    - 在重構或大改版前補充前端測試
+  long_term:
+    - 考慮實作費用列表分頁（當單個活動費用 >100 筆時）
+    - 考慮實作進階篩選和排序功能
+
+deployment_readiness: true
+release_blockers: []
+
+notes: |
+  Story 5.2 的功能在 Story 5.1 實作期間已完成，本次為代碼審查並補充測試。
+  所有驗收標準達成，測試覆蓋充分，技術債務均為非阻塞性改進項目。
+  建議標記為 Done 並進入下一個故事。

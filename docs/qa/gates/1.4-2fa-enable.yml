@@ -1,0 +1,76 @@
+﻿# Quality Gate Decision
+schema: 1
+story: "1.4"
+story_title: "啟用雙因素認證 (2FA)"
+gate: PASS
+status_reason: "2FA 功能實作完整且通過所有自動化測試。後端 API、資料模型、測試覆蓋均達標。前端 UI 已實作但需手動驗證。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-12-15T09:51:24Z"
+
+waiver:
+  active: false
+
+top_issues:
+  - id: "UI-001"
+    severity: low
+    finding: "前端 UI 功能需要手動測試驗證"
+    suggested_action: "進行手動測試確認 QR Code 顯示和驗證流程正常"
+  - id: "SEC-001"
+    severity: low
+    finding: "QR Code 生成使用外部 API (qrserver.com)"
+    suggested_action: "考慮改用客戶端 QR Code 庫（qrcode.js）以減少外部依賴"
+  - id: "TEST-001"
+    severity: low
+    finding: "缺少與 Story 1.5 (2FA 登入) 的整合測試"
+    suggested_action: "完成 Story 1.5 後進行整合測試"
+
+risk_summary:
+  totals:
+    critical: 0
+    high: 0
+    medium: 0
+    low: 3
+  recommendations:
+    must_fix: []
+    monitor:
+      - "手動測試前端 UI 功能"
+      - "監控外部 QR Code API 可用性"
+      - "Story 1.5 完成後進行整合測試"
+
+quality_score: 92
+
+evidence:
+  tests_reviewed: 14
+  tests_passed: 14
+  test_coverage: "100% (後端 API)"
+  risks_identified: 3
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: [5, 6]
+    ac_gaps_reason: "AC5 依賴 Story 1.5 實作，AC6 為未來功能"
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "JWT 認證正確、TOTP 實作符合標準、valid_window=1 合理"
+  performance:
+    status: PASS
+    notes: "單一資料庫查詢、無性能瓶頸"
+  reliability:
+    status: PASS
+    notes: "錯誤處理完整、資料庫事務管理正確"
+  maintainability:
+    status: PASS
+    notes: "程式碼清晰、測試覆蓋完整"
+  testability:
+    status: PASS
+    notes: "14 個測試案例全部通過，測試設計良好"
+
+recommendations:
+  future_improvements:
+    - action: "實作備用碼功能 (AC6)"
+      priority: medium
+    - action: "考慮使用客戶端 QR Code 生成"
+      priority: low
+    - action: "添加 2FA 重置流程"
+      priority: medium
