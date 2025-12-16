@@ -1,0 +1,57 @@
+﻿"""
+TC_2_5_A2: 測試非創建者無法查看待審核列表
+測試說明: 非活動創建者嘗試查看待審核列表時應返回403 Forbidden
+"""
+import pytest
+from flask import json
+from models.user import User
+from models.activity import Activity
+from models.activity_participant import ActivityParticipant
+from models import db
+from flask_jwt_extended import create_access_token
+from datetime import datetime, timedelta
+
+def test_non_creator_cannot_view_pending_list(client, test_app):
+    """測試非創建者無法查看待審核申請列表"""
+    with test_app.app_context():
+        creator = User(name='creator', email='creator@test.com', password_hash='hash')
+        other_user = User(name='other', email='other@test.com', password_hash='hash')
+        applicant = User(name='applicant', email='applicant@test.com', password_hash='hash')
+        db.session.add_all([creator, other_user, applicant])
+        db.session.commit()
+        
+        activity = Activity(
+            title='測試活動',
+            category='hiking',
+            location='陽明山',
+            date=datetime.now().date() + timedelta(days=7),
+            max_participants=10,
+            creator_id=creator.user_id
+        )
+        db.session.add(activity)
+        db.session.commit()
+        
+        participant = ActivityParticipant(
+            activity_id=activity.activity_id,
+            user_id=applicant.user_id,
+            status='pending',
+            role='participant'
+        )
+        db.session.add(participant)
+        db.session.commit()
+        
+        other_user_token = create_access_token(identity=str(other_user.user_id))
+        activity_id = activity.activity_id
+        
+        response = client.get(
+            f'/api/activities/{activity_id}/participants/pending',
+            headers={'Authorization': f'Bearer {other_user_token}'}
+        )
+        
+        assert response.status_code == 403
+        data = json.loads(response.data)
+        assert 'error' in data
+
+if __name__ == '__main__':
+    import pytest
+    pytest.main([__file__, '-v', '--no-cov'])
