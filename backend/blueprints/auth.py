@@ -138,6 +138,7 @@ def login():
                 return jsonify({'error': '驗證碼錯誤'}), 401
         
         # 更新最後上線時間
+        # PERFORMANCE TEST: 暫時註解以測試效能提升
         user.update_last_seen()
         
         # 建立 JWT Token - 使用字串格式的 user_id

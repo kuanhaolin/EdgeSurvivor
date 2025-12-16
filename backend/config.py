@@ -13,12 +13,15 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=1)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     
-    # 資料庫連接池配置
+    # 資料庫連接池配置（極限壓測配置）
+    # pool_size + max_overflow 應小於 MySQL max_connections (已設定 2000)
+    # 公式: workers * 平均每請求持有連接時間 * 併發請求數
+    # 8 workers × 每 worker 50+ 連接 = 400+ 連接峰值
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 20,          # 連接池大小
-        'max_overflow': 40,       # 超過 pool_size 後最多再建立的連接數
+        'pool_size': 200,         # 基礎連接池（大幅提升）
+        'max_overflow': 300,      # 高峰期額外連接（總計 500）
         'pool_timeout': 30,       # 獲取連接的超時時間
-        'pool_recycle': 3600,     # 連接回收時間（秒）
+        'pool_recycle': 1800,     # 連接回收時間（30分鐘，更快釋放）
         'pool_pre_ping': True     # 使用前先測試連接是否有效
     }
     
