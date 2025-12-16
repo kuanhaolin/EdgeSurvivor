@@ -150,20 +150,40 @@ def get_conversations():
 @chat_bp.route('/<int:user_id>/messages', methods=['GET'])
 @jwt_required()
 def get_messages(user_id):
-    """獲取與特定用戶的訊息記錄"""
+    """獲取與特定用戶的訊息記錄（支援分頁）"""
     try:
+        from sqlalchemy.orm import joinedload
+        
         current_user_id = int(get_jwt_identity())
         
-        # 獲取兩人之間的所有訊息
-        messages = ChatMessage.query.filter(
-            or_(
-                and_(ChatMessage.sender_id == current_user_id, ChatMessage.receiver_id == user_id),
-                and_(ChatMessage.sender_id == user_id, ChatMessage.receiver_id == current_user_id)
-            )
-        ).order_by(ChatMessage.timestamp.asc()).all()
+        # 獲取分頁參數
+        limit = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        # 查詢條件
+        filter_condition = or_(
+            and_(ChatMessage.sender_id == current_user_id, ChatMessage.receiver_id == user_id),
+            and_(ChatMessage.sender_id == user_id, ChatMessage.receiver_id == current_user_id)
+        )
+        
+        # 獲取總數
+        total = ChatMessage.query.filter(filter_condition).count()
+        
+        # 獲取訊息（倒序查詢，使用 joinedload 預載發送者資料）
+        messages = ChatMessage.query.filter(filter_condition) \
+            .options(joinedload(ChatMessage.sender)) \
+            .order_by(ChatMessage.timestamp.desc()) \
+            .limit(limit) \
+            .offset(offset) \
+            .all()
+        
+        # 反轉結果以正序顯示（最舊在前，最新在後）
+        messages.reverse()
         
         return jsonify({
-            'messages': [msg.to_dict() for msg in messages]
+            'messages': [msg.to_dict() for msg in messages],
+            'total': total,
+            'has_more': offset + len(messages) < total
         }), 200
         
     except Exception as e:

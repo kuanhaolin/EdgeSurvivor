@@ -154,7 +154,7 @@
                 @click="sendMatchRequest"
               >
                 <el-icon><UserFilled /></el-icon>
-                發送交友請求
+                邀請成為旅伴
               </el-button>
               <el-button 
                 v-else-if="friendStatus === 'pending'" 
@@ -536,23 +536,39 @@ const generateLineQRCode = () => {
   container.appendChild(img)
 }
 
-// 發送交友請求
+// 發送直接媒合請求（不基於活動）
 const sendMatchRequest = async () => {
   try {
+    // 使用對話框讓用戶輸入邀請訊息
+    const { value: message } = await ElMessageBox.prompt(
+      '請輸入邀請訊息',
+      '邀請成為旅伴',
+      {
+        confirmButtonText: '發送',
+        cancelButtonText: '取消',
+        inputPlaceholder: '希望能成為旅伴，一起探索世界！',
+        inputValue: '希望能成為旅伴，一起探索世界！'
+      }
+    )
+    
     const userId = route.params.id
     await axios.post('/matches', {
       responder_id: userId,
-      message: '希望能成為旅伴，一起探索世界！'
+      activity_id: null,  // 直接媒合（不基於活動）
+      message: message || '希望能成為旅伴！'
     })
     
-    ElMessage.success('交友請求已發送！')
+    ElMessage.success('邀請已發送！')
     friendStatus.value = 'pending'
   } catch (error) {
-    console.error('發送交友請求失敗:', error)
+    // 用戶取消輸入不顯示錯誤
+    if (error === 'cancel') return
+    
+    console.error('發送邀請失敗:', error)
     if (error.response?.data?.error) {
       ElMessage.error(error.response.data.error)
     } else {
-      ElMessage.error('發送交友請求失敗')
+      ElMessage.error('發送邀請失敗')
     }
   }
 }

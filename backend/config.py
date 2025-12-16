@@ -60,6 +60,8 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     WTF_CSRF_ENABLED = False
+    # SQLite 不支援連接池參數，需要覆寫
+    SQLALCHEMY_ENGINE_OPTIONS = {}
 
 config = {
     'development': DevelopmentConfig,

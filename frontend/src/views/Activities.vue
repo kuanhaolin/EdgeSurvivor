@@ -64,7 +64,7 @@
               :md="8"
               :lg="6"
             >
-              <el-card class="activity-card" shadow="hover">
+              <el-card class="activity-card" :class="{ 'cancelled-activity': activity.status === 'cancelled' }" shadow="hover">
                 <template #header>
                   <div class="activity-header">
                     <span class="activity-title">{{ activity.title }}</span>
@@ -137,7 +137,7 @@
               :md="8"
               :lg="6"
             >
-              <el-card class="activity-card" shadow="hover">
+              <el-card class="activity-card" :class="{ 'cancelled-activity': activity.status === 'cancelled' }" shadow="hover">
                 <template #header>
                   <div class="activity-header">
                     <span class="activity-title">{{ activity.title }}</span>
@@ -204,7 +204,7 @@
               :md="8"
               :lg="6"
             >
-              <el-card class="activity-card" shadow="hover">
+              <el-card class="activity-card" :class="{ 'cancelled-activity': activity.status === 'cancelled' }" shadow="hover">
                 <template #header>
                   <div class="activity-header">
                     <span class="activity-title">{{ activity.title }}</span>
@@ -292,7 +292,13 @@
                     <el-button size="small" type="info" @click="messageCreator(activity)">
                       詢問資訊
                     </el-button>
-                    <el-button class="apply-btn" type="success" size="small" @click="joinActivity(activity.id)">
+                    <el-button 
+                      v-if="activity.status !== 'cancelled'"
+                      class="apply-btn" 
+                      type="success" 
+                      size="small" 
+                      @click="joinActivity(activity.id)"
+                    >
                       申請加入
                     </el-button>
                   </div>
@@ -680,9 +686,16 @@ const allActivities = computed(() => {
   })
 })
 
-const filteredAllActivities = computed(() => filterList(allActivities.value))
+// 過濾邏輯：「我的所有活動」和「我參加的活動」排除已完成的活動（顯示進行中的）
+const filteredAllActivities = computed(() => {
+  const ongoingActivities = allActivities.value.filter(a => a.status !== 'completed')
+  return filterList(ongoingActivities)
+})
 const filteredCreatedActivities = computed(() => filterList(createdActivities.value))
-const filteredJoinedActivities = computed(() => filterList(joinedActivities.value))
+const filteredJoinedActivities = computed(() => {
+  const ongoingActivities = joinedActivities.value.filter(a => a.status !== 'completed')
+  return filterList(ongoingActivities)
+})
 const filteredDiscoverActivities = computed(() => filterList(discoverActivities.value))
 
 // 狀態類型對應
@@ -1087,6 +1100,21 @@ const createActivity = async () => {
   overflow-wrap: anywhere;
   line-height: 1.6;
   color: #606266;
+}
+
+/* 已取消活動的視覺樣式 */
+.cancelled-activity {
+  opacity: 0.6;
+  position: relative;
+}
+
+.cancelled-activity .activity-title {
+  text-decoration: line-through;
+  color: #909399;
+}
+
+.cancelled-activity .activity-content {
+  color: #909399;
 }
 
 @media (max-width: 768px) {

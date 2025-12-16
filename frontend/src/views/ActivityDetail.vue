@@ -25,8 +25,8 @@
                   <el-dropdown-item command="ongoing" :disabled="activity.status === 'ongoing'">
                     進行中
                   </el-dropdown-item>
-                  <el-dropdown-item command="completed" :disabled="activity.status === 'completed'">
-                    已完成
+                  <el-dropdown-item command="completed" :disabled="activity.status === 'completed' || !isActivityEnded">
+                    已完成 {{ !isActivityEnded ? '(活動尚未結束)' : '' }}
                   </el-dropdown-item>
                   <el-dropdown-item command="cancelled" :disabled="activity.status === 'cancelled'" divided>
                     取消活動
@@ -132,9 +132,21 @@
                     </el-tag>
                   </div>
                 </div>
-                <!-- 移除按鈕（僅創建者可見且不能對自己操作） -->
-                <div v-if="isCreator && participant.user_id !== currentUserId" style="margin-top: 10px;">
+                <!-- 動作按鈕區 -->
+                <div v-if="participant.user_id !== currentUserId" style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                  <!-- 發起媒合按鈕（非自己的參與者都可見） -->
                   <el-button
+                    type="success"
+                    size="small"
+                    @click.stop="sendMatchToParticipant(participant)"
+                  >
+                    <el-icon><User /></el-icon>
+                    發起媒合
+                  </el-button>
+                  
+                  <!-- 移除按鈕（僅創建者可見） -->
+                  <el-button
+                    v-if="isCreator"
                     type="danger"
                     size="small"
                     @click.stop="removeParticipant(participant)"
@@ -337,7 +349,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Edit, Plus, ArrowDown, ChatDotRound, Delete, Close, UploadFilled } from '@element-plus/icons-vue'
+import { Edit, Plus, ArrowDown, ChatDotRound, Delete, Close, UploadFilled, User } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import ActivityDiscussion from '@/components/ActivityDiscussion.vue'
 import ExpenseManager from '@/components/ExpenseManager.vue'
@@ -373,6 +385,14 @@ const isCreator = computed(() => {
 const isParticipant = computed(() => {
   // 後端只返回已加入/已批准的參與者清單，因此只需比對 user_id
   return participants.value.some(p => p.user_id === currentUserId.value)
+})
+
+// 檢查活動是否已結束
+const isActivityEnded = computed(() => {
+  if (!activity.value) return false
+  const endDate = activity.value.end_date || activity.value.start_date || activity.value.date
+  if (!endDate) return false
+  return new Date(endDate) < new Date()
 })
 
 // 排序參與者：創建者排在最前面
@@ -741,6 +761,37 @@ const removeParticipant = async (participant) => {
     if (error !== 'cancel') {
       console.error('移除參與者失敗:', error)
       ElMessage.error(error.response?.data?.error || '移除參與者失敗')
+    }
+  }
+}
+
+// 發起媒合申請
+const sendMatchToParticipant = async (participant) => {
+  try {
+    const { value: message } = await ElMessageBox.prompt(
+      `向 ${participant.name} 發起旅伴媒合`,
+      '發起媒合',
+      {
+        confirmButtonText: '發送',
+        cancelButtonText: '取消',
+        inputPlaceholder: '希望能成為旅伴！',
+        inputValue: '希望能成為旅伴！'
+      }
+    ).catch(() => ({ value: null }))
+    
+    if (!message) return
+    
+    await axios.post('/matches', {
+      responder_id: participant.user_id,
+      activity_id: activityId.value,
+      message: message
+    })
+    
+    ElMessage.success('媒合申請已發送！')
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('發送媒合失敗:', error)
+      ElMessage.error(error.response?.data?.error || '發送媒合失敗')
     }
   }
 }

@@ -275,3 +275,182 @@ def get_settlement(activity_id):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@expenses_bp.route('/expenses/user/<int:user_id>/stats', methods=['GET'])
+@jwt_required()
+def get_user_expense_stats(user_id):
+    """獲取用戶個人費用統計"""
+    try:
+        from sqlalchemy.orm import joinedload
+        from datetime import date
+        
+        current_user_id = int(get_jwt_identity())
+        
+        # 權限檢查：用戶只能查看自己的統計
+        if current_user_id != user_id:
+            return jsonify({'error': '無權限查看其他用戶的統計'}), 403
+        
+        # 驗證用戶是否存在
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': '用戶不存在'}), 404
+        
+        # 獲取 query 參數
+        group_by = request.args.get('group_by', None)
+        start_date_str = request.args.get('start_date', None)
+        end_date_str = request.args.get('end_date', None)
+        
+        # 驗證和解析日期參數
+        start_date = None
+        end_date = None
+        
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'error': '無效的 start_date 格式，請使用 YYYY-MM-DD'}), 400
+        
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'error': '無效的 end_date 格式，請使用 YYYY-MM-DD'}), 400
+        
+        # 驗證 group_by 參數
+        if group_by and group_by != 'activity':
+            return jsonify({'error': '無效的 group_by 參數，只支援 "activity"'}), 400
+        
+        # 構建基礎查詢
+        query = Expense.query
+        
+        # 應用日期篩選
+        if start_date:
+            query = query.filter(Expense.expense_date >= start_date)
+        if end_date:
+            query = query.filter(Expense.expense_date <= end_date)
+        
+        # 預載活動資料以避免 N+1 查詢
+        if group_by == 'activity':
+            query = query.options(joinedload(Expense.activity))
+        
+        # 獲取所有相關費用
+        all_expenses = query.all()
+        
+        # 計算統計資料
+        def calculate_user_split_amount(expense, user_id):
+            """計算用戶在單一費用中的分攤金額"""
+            amount = float(expense.amount)
+            
+            # 借款類型
+            if expense.split_type == 'borrow':
+                if expense.borrower_id == user_id:
+                    return amount  # 借款人欠全額
+                return 0
+            
+            # 分攤類型
+            if expense.split_type in ['all', 'selected'] or expense.is_split:
+                try:
+                    # 解析分攤參與者
+                    split_participants = []
+                    if expense.split_participants:
+                        split_participants = json.loads(expense.split_participants)
+                    elif expense.participants:  # 向後兼容
+                        split_participants = json.loads(expense.participants)
+                    
+                    # 如果是 'all' 類型且沒有明確的參與者列表
+                    if expense.split_type == 'all' and not split_participants:
+                        # 獲取活動的所有參與者
+                        if expense.activity:
+                            activity = expense.activity
+                            split_participants = [p.user_id for p in activity.get_participants()]
+                    
+                    # 檢查用戶是否在分攤列表中
+                    if split_participants and user_id in split_participants:
+                        return amount / len(split_participants)
+                    
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            
+            return 0
+        
+        # 計算整體統計
+        total_paid = 0.0
+        total_owed = 0.0
+        expense_count = 0
+        activities_set = set()
+        
+        for expense in all_expenses:
+            # 計算支付金額
+            if expense.payer_id == user_id:
+                total_paid += float(expense.amount)
+            
+            # 計算應分攤金額
+            split_amount = calculate_user_split_amount(expense, user_id)
+            if split_amount > 0:
+                total_owed += split_amount
+                expense_count += 1
+            
+            # 記錄涉及的活動
+            if expense.activity_id:
+                activities_set.add(expense.activity_id)
+        
+        net_balance = total_paid - total_owed
+        
+        overall_stats = {
+            'total_paid': round(total_paid, 2),
+            'total_owed': round(total_owed, 2),
+            'net_balance': round(net_balance, 2),
+            'expense_count': expense_count,
+            'activities_count': len(activities_set)
+        }
+        
+        # 如果需要按活動分組
+        if group_by == 'activity':
+            activity_stats = {}
+            
+            for expense in all_expenses:
+                activity_id = expense.activity_id
+                if not activity_id:
+                    continue
+                
+                if activity_id not in activity_stats:
+                    activity_stats[activity_id] = {
+                        'activity_id': activity_id,
+                        'activity_title': expense.activity.title if expense.activity else '未知活動',
+                        'total_paid': 0.0,
+                        'total_owed': 0.0,
+                        'expense_count': 0
+                    }
+                
+                # 累加支付金額
+                if expense.payer_id == user_id:
+                    activity_stats[activity_id]['total_paid'] += float(expense.amount)
+                
+                # 累加應分攤金額
+                split_amount = calculate_user_split_amount(expense, user_id)
+                if split_amount > 0:
+                    activity_stats[activity_id]['total_owed'] += split_amount
+                    activity_stats[activity_id]['expense_count'] += 1
+            
+            # 計算每個活動的淨餘額並格式化
+            by_activity = []
+            for stats in activity_stats.values():
+                stats['total_paid'] = round(stats['total_paid'], 2)
+                stats['total_owed'] = round(stats['total_owed'], 2)
+                stats['net_balance'] = round(stats['total_paid'] - stats['total_owed'], 2)
+                by_activity.append(stats)
+            
+            # 按活動 ID 排序
+            by_activity.sort(key=lambda x: x['activity_id'])
+            
+            return jsonify({
+                'by_activity': by_activity,
+                'overall': overall_stats
+            }), 200
+        
+        # 返回整體統計
+        return jsonify(overall_stats), 200
+        
+    except Exception as e:
+        print(f"查詢個人費用統計失敗: {str(e)}")
+        return jsonify({'error': str(e)}), 500

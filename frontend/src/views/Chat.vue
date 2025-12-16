@@ -109,7 +109,17 @@
             </el-alert>
 
             <!-- 訊息列表 -->
-            <el-scrollbar ref="messageScrollbar" height="calc(100vh - 400px)" class="message-list">
+            <el-scrollbar 
+              ref="messageScrollbar" 
+              height="calc(100vh - 400px)" 
+              class="message-list"
+              @scroll="onScroll"
+            >
+              <!-- 載入中提示 -->
+              <div v-if="loading" class="loading-more">
+                <el-icon class="is-loading"><Loading /></el-icon>
+                <span>載入更多訊息...</span>
+              </div>
               <div
                 v-for="message in messages"
                 :key="message.id"
@@ -140,7 +150,15 @@
                       儲存
                     </el-button>
                   </div>
-                  <span class="message-time">{{ message.time }}</span>
+                  <div class="message-meta">
+                    <span class="message-time">{{ message.time }}</span>
+                    <span v-if="message.isMine" class="message-status">
+                      <el-icon v-if="message.status === 'sending'" class="is-loading"><Loading /></el-icon>
+                      <span v-else-if="message.status === 'sent'" class="status-sent">✓</span>
+                      <span v-else-if="message.status === 'delivered'" class="status-delivered">✓✓</span>
+                      <span v-else-if="message.status === 'read'" class="status-read">✓✓</span>
+                    </span>
+                  </div>
                 </div>
               </div>
             </el-scrollbar>
@@ -151,7 +169,9 @@
                 v-model="messageInput"
                 type="textarea"
                 :rows="3"
-                placeholder="輸入訊息... (Ctrl+Enter 發送)"
+                maxlength="5000"
+                show-word-limit
+                placeholder="輸入訊息... (Ctrl+Enter 發送，最多5000字)"
                 @keydown.ctrl.enter="sendMessage"
               />
               
@@ -180,7 +200,11 @@
                     圖片
                   </el-button>
                 </el-button-group>
-                <el-button type="primary" @click="sendMessage">
+                <el-button 
+                  type="primary" 
+                  @click="sendMessage"
+                  :disabled="!messageInput.trim() || messageInput.length > 5000"
+                >
                   發送
                   <el-icon><Promotion /></el-icon>
                 </el-button>
@@ -258,7 +282,8 @@ import {
   Promotion,
   Location,
   ArrowLeft,
-  Download
+  Download,
+  Loading
 } from '@element-plus/icons-vue'
 import NavBar from '@/components/NavBar.vue'
 import axios from '@/utils/axios'
@@ -297,6 +322,11 @@ const messageInput = ref('')
 
 // 訊息滾動容器
 const messageScrollbar = ref(null)
+
+// 無限滾動狀態
+const loading = ref(false)
+const hasMore = ref(true)
+const currentOffset = ref(0)
 
 // 載入聊天列表
 const loadConversations = async () => {
@@ -337,13 +367,18 @@ const loadConversations = async () => {
 }
 
 // 載入聊天訊息
-const loadMessages = async (userId) => {
+const loadMessages = async (userId, isInitial = true) => {
   try {
-    const response = await axios.get(`/chat/${userId}/messages`)
+    const limit = 50
+    const offset = isInitial ? 0 : currentOffset.value
+    
+    const response = await axios.get(`/chat/${userId}/messages`, {
+      params: { limit, offset }
+    })
     
     if (response.data && response.data.messages) {
       const currentUserId = JSON.parse(localStorage.getItem('user')).user_id
-      messages.value = response.data.messages.map(msg => {
+      const newMessages = response.data.messages.map(msg => {
         let content = msg.content
         
         // 如果是圖片訊息且 URL 是相對路徑，轉換為完整 URL
@@ -356,24 +391,92 @@ const loadMessages = async (userId) => {
           type: msg.message_type || 'text',
           content: content,
           time: formatTime(msg.created_at),
-          isMine: msg.sender_id === currentUserId
+          isMine: msg.sender_id === currentUserId,
+          status: msg.status || 'sent'
         }
       })
+      
+      if (isInitial) {
+        // 初始載入：替換所有訊息
+        messages.value = newMessages
+        currentOffset.value = newMessages.length
+        hasMore.value = response.data.has_more || false
+        
+        // 滾動到底部
+        nextTick(() => {
+          if (messageScrollbar.value) {
+            messageScrollbar.value.setScrollTop(999999)
+          }
+        })
+      } else {
+        // 載入更多：插入到頂部
+        messages.value = [...newMessages, ...messages.value]
+        currentOffset.value += newMessages.length
+        hasMore.value = response.data.has_more || false
+      }
     } else {
       // 沒有訊息記錄時，設為空陣列
       messages.value = []
+      hasMore.value = false
     }
-    
-    // 滾動到底部
-    nextTick(() => {
-      if (messageScrollbar.value) {
-        messageScrollbar.value.setScrollTop(999999)
-      }
-    })
   } catch (error) {
     console.error('載入訊息失敗:', error)
     // 發生錯誤時也設為空陣列，這樣可以開始新聊天
-    messages.value = []
+    if (isInitial) {
+      messages.value = []
+    }
+    hasMore.value = false
+  }
+}
+
+// 載入更多訊息（無限滾動）
+const loadMoreMessages = async () => {
+  if (loading.value || !hasMore.value || !selectedChat.value) {
+    return
+  }
+  
+  loading.value = true
+  
+  try {
+    // 記住當前滾動位置
+    const scrollContainer = messageScrollbar.value?.wrapRef
+    if (!scrollContainer) {
+      loading.value = false
+      return
+    }
+    
+    const oldScrollHeight = scrollContainer.scrollHeight
+    const oldScrollTop = scrollContainer.scrollTop
+    
+    // 載入更多訊息
+    await loadMessages(selectedChat.value.id, false)
+    
+    // 恢復滾動位置（保持用戶看到原本的訊息）
+    await nextTick()
+    const newScrollHeight = scrollContainer.scrollHeight
+    const scrollDiff = newScrollHeight - oldScrollHeight
+    messageScrollbar.value.setScrollTop(oldScrollTop + scrollDiff)
+    
+    console.log('✅ 載入更多訊息完成', {
+      載入數量: messages.value.length - currentOffset.value + 50,
+      總數: messages.value.length,
+      還有更多: hasMore.value
+    })
+  } catch (error) {
+    console.error('載入更多訊息失敗:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 滾動事件處理
+const onScroll = (event) => {
+  const { scrollTop } = event
+  
+  // 滾動到頂部時載入更多
+  if (scrollTop <= 10 && !loading.value && hasMore.value) {
+    console.log('🔄 觸發載入更多訊息...')
+    loadMoreMessages()
   }
 }
 
@@ -433,8 +536,13 @@ const selectChat = async (chat) => {
     showChatList.value = false
   }
   
-  // 載入訊息
-  loadMessages(chat.id)
+  // 重置無限滾動狀態
+  currentOffset.value = 0
+  hasMore.value = true
+  loading.value = false
+  
+  // 載入訊息（初始載入）
+  await loadMessages(chat.id, true)
   
   // 加入新的聊天室（使用 user_id 或 matchId）
   if (socketService.isConnected()) {
@@ -1125,6 +1233,16 @@ const getActivityStatusText = (status) => {
   padding: 20px;
 }
 
+.loading-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  color: #909399;
+  font-size: 14px;
+  gap: 8px;
+}
+
 .message-item {
   display: flex;
   gap: 10px;
@@ -1189,10 +1307,49 @@ const getActivityStatusText = (status) => {
   opacity: 1;
 }
 
+.message-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+
 .message-time {
   font-size: 12px;
   color: #909399;
-  margin-top: 5px;
+}
+
+.message-status {
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px;
+  color: #909399;
+}
+
+.message-status .status-sent {
+  color: #909399;
+}
+
+.message-status .status-delivered {
+  color: #67c23a;
+}
+
+.message-status .status-read {
+  color: #409eff;
+  font-weight: bold;
+}
+
+.message-status .is-loading {
+  animation: rotating 2s linear infinite;
+}
+
+@keyframes rotating {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .message-input-area {

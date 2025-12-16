@@ -172,6 +172,11 @@ def register_socketio_events(socketio, app):
                     logger.error('❌ 缺少必要參數')
                     return {'error': '缺少必要參數'}
                 
+                # 驗證訊息內容不為空白 (AC: 7)
+                if not content.strip():
+                    logger.error('❌ 訊息內容為空白')
+                    return {'error': '訊息內容不能為空白'}
+                
                 # 判斷 room_id 是 match_id 還是 user_id
                 match = Match.query.get(room_id)
                 receiver_id = None

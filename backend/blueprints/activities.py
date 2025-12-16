@@ -211,6 +211,12 @@ def update_activity(activity_id):
             activity.start_date = start_date
         if 'end_date' in data:
             activity.end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00')).date()
+        
+        # 驗證日期範圍：開始日期必須早於或等於結束日期
+        if activity.start_date and activity.end_date:
+            if activity.start_date > activity.end_date:
+                return jsonify({'error': 'start_date must be before or equal to end_date'}), 400
+        
         if 'start_time' in data:
             time_str = data['start_time']
             if len(time_str) == 8:  # HH:MM:SS
@@ -230,6 +236,12 @@ def update_activity(activity_id):
         if 'description' in data:
             activity.description = data['description']
         if 'status' in data:
+            # 如果要標記為已完成，需驗證活動是否已結束
+            if data['status'] == 'completed':
+                from datetime import date
+                activity_end_date = activity.end_date or activity.start_date or activity.date
+                if activity_end_date and activity_end_date > date.today():
+                    return jsonify({'error': '活動尚未結束，無法標記為已完成'}), 400
             activity.status = data['status']
         if 'cover_image' in data:
             activity.cover_image = data['cover_image']
